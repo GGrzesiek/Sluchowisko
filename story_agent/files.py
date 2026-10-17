@@ -8,13 +8,19 @@ OUT = Path("out")
 CACHE = Path("cache")
 
 
+SECRET_FILES = (Path(".env"), Path("../.env"), Path("../klucze_api.txt"))
+
+
 def env(name: str) -> str:
     value = os.getenv(name, "").strip()
-    if value or not Path(".env").exists():
+    if value:
         return value
-    for line in Path(".env").read_text(encoding="utf-8").splitlines():
-        if line.startswith(f"{name}="):
-            return line.split("=", 1)[1].strip().strip('"')
+    for path in SECRET_FILES:
+        if not path.exists():
+            continue
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if line.strip().startswith(f"{name}="):
+                return line.split("=", 1)[1].strip().strip('"')
     return ""
 
 
