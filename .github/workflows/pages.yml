@@ -24,6 +24,7 @@ jobs:
       - name: Build site
         env:
           GH_TOKEN: ${{ github.token }}
+          VITE_API_URL: ${{ vars.API_URL }}
         run: |
           set -euo pipefail
           PAGES_BASE_PATH=$(gh api "repos/$GITHUB_REPOSITORY/pages" --jq '.html_url | sub("^https?://[^/]+"; "")')

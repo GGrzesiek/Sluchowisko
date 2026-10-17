@@ -119,4 +119,4 @@ def build_ride_info(v: Vehicle) -> dict:
             item["hasStory"] = True
         out.append(item)
 
-    return {"vehicle": v.number, "destination": route.last_stop_name or stops[-1].name, "stops": out}
+    return {"vehicle": v.number, "line": v.line, "destination": route.last_stop_name or stops[-1].name, "stops": out}

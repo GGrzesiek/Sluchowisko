@@ -91,4 +91,4 @@ def ride_stops(request, vehicle_number):
     try:
         return Response(build_ride_info(vehicle))
     except NoRouteError:
-        return Response({"code": "no_route"}, status=status.HTTP_404_NOT_FOUND)
+        return Response({"code": "no_route", "line": vehicle.line}, status=status.HTTP_404_NOT_FOUND)

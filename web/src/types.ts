@@ -19,6 +19,7 @@ export interface RouteStop {
 
 export interface RideInfo {
   vehicle: string;
+  line?: string;
   destination: string;
   stops: RouteStop[];
 }
