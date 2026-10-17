@@ -1,12 +1,17 @@
+import threading
+
 from django.core.cache import cache
 from django.db import transaction
 
 from .geo import bearing_deg, haversine_m
 from .models import PositionLog, Vehicle
-from .warsaw_api import VehicleReading, fetch_vehicle_positions
+from .warsaw_api import VehicleReading, WarsawApiError, fetch_vehicle_positions
 
 CITY_POSITIONS_CACHE_KEY = "city:positions"
+CITY_FAILURE_CACHE_KEY = "city:positions:failed"
 CITY_POSITIONS_CACHE_SECONDS = 10
+CITY_REQUEST_TIMEOUT_SECONDS = 5
+_city_refill = threading.Lock()
 
 # Below this movement we keep the old heading (GPS jitter while standing at a stop)
 MIN_MOVE_FOR_HEADING_M = 15
@@ -50,10 +55,27 @@ def ingest_readings(readings: list[VehicleReading]) -> int:
 
 def city_positions() -> list[VehicleReading]:
     readings = cache.get(CITY_POSITIONS_CACHE_KEY)
-    if readings is None:
-        readings = [*fetch_vehicle_positions(vehicle_type=1), *fetch_vehicle_positions(vehicle_type=2)]
+    if readings is not None:
+        return readings
+    with _city_refill:
+        readings = cache.get(CITY_POSITIONS_CACHE_KEY)
+        if readings is not None:
+            return readings
+        if cache.get(CITY_FAILURE_CACHE_KEY):
+            raise WarsawApiError("City API failed less than 10 s ago")
+        try:
+            readings = [
+                reading
+                for vehicle_type in (1, 2)
+                for reading in fetch_vehicle_positions(
+                    vehicle_type=vehicle_type, timeout=CITY_REQUEST_TIMEOUT_SECONDS, attempts=1
+                )
+            ]
+        except WarsawApiError:
+            cache.set(CITY_FAILURE_CACHE_KEY, True, CITY_POSITIONS_CACHE_SECONDS)
+            raise
         cache.set(CITY_POSITIONS_CACHE_KEY, readings, CITY_POSITIONS_CACHE_SECONDS)
-    return readings
+        return readings
 
 
 def refresh_vehicle(number: str) -> bool:

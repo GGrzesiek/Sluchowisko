@@ -36,7 +36,7 @@ class VehicleReading:
     time: datetime
 
 
-def _request(action: str, body: dict | None = None, timeout: int = 20):
+def _request(action: str, body: dict | None = None, timeout: int = 20, attempts: int = RETRIES):
     """POST to the city API and return the payload (list or dict). Retries network hiccups."""
     if not settings.WARSAW_API_KEY:
         raise WarsawApiError("WARSAW_API_KEY is not set (see .env.example)")
@@ -44,7 +44,7 @@ def _request(action: str, body: dict | None = None, timeout: int = 20):
         raise WarsawApiError("API action name is empty, set it in .env (see config/settings.py)")
     headers = {"Authorization": settings.WARSAW_API_KEY, "Content-Type": "application/json"}
     last_error = None
-    for attempt in range(RETRIES):
+    for attempt in range(attempts):
         try:
             resp = requests.post(
                 f"{settings.WARSAW_API_BASE}/{action}", json=body or {}, headers=headers, timeout=timeout
@@ -70,12 +70,13 @@ def _request(action: str, body: dict | None = None, timeout: int = 20):
             msg = str(e).lower()
             if "token" in msg or "apikey" in msg or "action name" in msg:
                 break  # a wrong token or config won't fix itself
-            time.sleep(1.5 * (attempt + 1))
+            if attempt + 1 < attempts:
+                time.sleep(1.5 * (attempt + 1))
     raise WarsawApiError(str(last_error))
 
 
-def _get_list(action: str, body: dict | None = None) -> list:
-    result = _request(action, body)
+def _get_list(action: str, body: dict | None = None, timeout: int = 20, attempts: int = RETRIES) -> list:
+    result = _request(action, body, timeout=timeout, attempts=attempts)
     if not isinstance(result, list):
         raise WarsawApiError(f"Expected a list from {action}, got {type(result).__name__}")
     return result
@@ -116,7 +117,9 @@ def iter_paged(action: str, body: dict | None = None, page_size: int = DEFAULT_P
 # ---------- Live positions ----------
 
 
-def fetch_vehicle_positions(line: str | None = None, vehicle_type: int = 2) -> list[VehicleReading]:
+def fetch_vehicle_positions(
+    line: str | None = None, vehicle_type: int = 2, timeout: int = 20, attempts: int = RETRIES
+) -> list[VehicleReading]:
     """Live positions, refreshed roughly every 10 s. type: 1 = bus, 2 = tram.
 
     The new API ignores the `line` parameter, so we also filter here.
@@ -125,7 +128,7 @@ def fetch_vehicle_positions(line: str | None = None, vehicle_type: int = 2) -> l
     if line:
         body["line"] = str(line)
     readings = []
-    for r in _get_list(settings.WARSAW_POSITIONS_ACTION, body):
+    for r in _get_list(settings.WARSAW_POSITIONS_ACTION, body, timeout=timeout, attempts=attempts):
         try:
             if line and str(r["Lines"]).strip() != str(line):
                 continue
