@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { RideProblem } from "./api";
 import { PLACEHOLDER_STORY } from "./data/placeholderRide";
 import { useAppErrors } from "./ErrorStatus";
+import { useNarration } from "./Narration";
 import type { Ride } from "./navigation";
 import { openRideSocket } from "./rideSocket";
 import { FindingVehicleScreen } from "./screens/FindingVehicleScreen";
@@ -74,10 +75,20 @@ export function useLiveRide(initial: RideInfo): RideInfo {
 
 export function LiveVehicleFound({ info, onStart }: { info: RideInfo; onStart: (latest: RideInfo) => void }) {
   const live = useLiveRide(info);
-  return <VehicleFoundScreen ride={live} onStart={() => onStart(live)} />;
+  const narration = useNarration();
+  const start = () => {
+    narration.start(PLACEHOLDER_STORY);
+    onStart(live);
+  };
+  return <VehicleFoundScreen ride={live} onStart={start} />;
 }
 
 export function LiveJourney({ info, onClose }: { info: RideInfo; onClose: () => void }) {
   const live = useLiveRide(info);
-  return <JourneyScreen ride={live} story={PLACEHOLDER_STORY} onClose={onClose} />;
+  const narration = useNarration();
+  const close = () => {
+    narration.stop();
+    onClose();
+  };
+  return <JourneyScreen ride={live} story={PLACEHOLDER_STORY} onClose={close} />;
 }

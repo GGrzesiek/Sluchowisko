@@ -115,6 +115,17 @@ describe("live ride", () => {
     expect(screen.queryByText("→ Wiatraczna")).not.toBeInTheDocument();
   });
 
+  it("starts the story when the passenger taps Zaczynamy and stops it when the ride ends", async () => {
+    openRide();
+    act(() => socket().receive("route", ride("Okopowa")));
+    fireEvent.click(await screen.findByRole("button", { name: "Zaczynamy" }));
+
+    expect(HTMLMediaElement.prototype.play).toHaveBeenCalledTimes(1);
+    expect(await screen.findByRole("button", { name: "Pauza" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Zakończ przejazd" }));
+    expect(HTMLMediaElement.prototype.pause).toHaveBeenCalled();
+  });
+
   it("closes the socket after the ride is cancelled", () => {
     openRide();
     fireEvent.click(screen.getByRole("button", { name: "Anuluj" }));

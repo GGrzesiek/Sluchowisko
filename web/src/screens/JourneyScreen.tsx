@@ -10,6 +10,7 @@ import {
   VehicleHeader,
 } from "../components";
 import { cx } from "../cx";
+import { clock, useNarration } from "../Narration";
 import type { RideInfo, StoryContent } from "../types";
 
 interface JourneyScreenProps {
@@ -25,7 +26,8 @@ const SETTLED_STRIP = { height: 214, axisY: 168 };
 
 export function JourneyScreen({ ride, story, onClose }: JourneyScreenProps) {
   const [settled, setSettled] = useState(false);
-  const [playing, setPlaying] = useState(true);
+  const narration = useNarration();
+  const ours = Boolean(story.audio) && narration.src === story.audio;
   const [scrollProgress, setScrollProgress] = useState(0);
 
   useEffect(() => {
@@ -102,15 +104,17 @@ export function JourneyScreen({ ride, story, onClose }: JourneyScreenProps) {
         <StoryText body={story.body} />
         <SourceList sources={story.sources} />
       </section>
-      <NowPlayingBar
-        title={story.title}
-        playing={playing}
-        elapsedLabel="02:05"
-        totalLabel="04:10"
-        progress={0.5}
-        onToggle={() => setPlaying((p) => !p)}
-        className="animate-fade-in sticky bottom-4 shadow-lg"
-      />
+      {story.audio && (
+        <NowPlayingBar
+          title={story.title}
+          playing={ours && narration.playing}
+          elapsedLabel={clock(ours ? narration.elapsed : 0)}
+          totalLabel={ours ? clock(narration.duration) : "--:--"}
+          progress={ours && narration.duration > 0 ? narration.elapsed / narration.duration : 0}
+          onToggle={() => narration.toggle(story)}
+          className="animate-fade-in sticky bottom-4 shadow-lg"
+        />
+      )}
     </main>
   );
 }
