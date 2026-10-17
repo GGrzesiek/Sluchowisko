@@ -37,13 +37,21 @@ later image changes.
 Each deploy starts a new revision without traffic, checks its `/api/health/` (database), and only then
 moves traffic to it. A red deploy leaves the previous revision serving.
 
-The Django secret key is created by the owner, never in Terraform or in the repo. Create it **before** the first apply of
-`infra/backend.tf`, or the apply stops halfway (rerun it after creating it). If the first apply fails with
+Secrets are created by the owner, never in Terraform or in the repo. Create each one **before** the apply that first
+uses it in `infra/backend.tf`, or the apply stops halfway (rerun it after creating it). If the apply fails with
 "Permission denied on secret", IAM has not propagated yet: rerun the Infra job once.
+
+| Secret                | Env var in Cloud Run  | Used for                                                       |
+| --------------------- | --------------------- | -------------------------------------------------------------- |
+| `django-secret-key`   | `SECRET_KEY`          | Django                                                         |
+| `stories-write-token` | `STORIES_WRITE_TOKEN` | writes to `/api/stories/` and `?draft=1`, by the stories agent |
 
 ```bash
 python3 -c "import secrets; print(secrets.token_urlsafe(50), end='')" | gcloud secrets create django-secret-key --project muzeum-w-autobusie-2026 --data-file=-
+python3 -c "import secrets; print(secrets.token_urlsafe(32), end='')" | gcloud secrets create stories-write-token --project muzeum-w-autobusie-2026 --data-file=-
 ```
+
+The owner passes the stories token to whoever runs the stories agent privately, never through the repo or chat logs.
 
 Database migrations are run by hand from a laptop (see Connecting), not by the deploy.
 
