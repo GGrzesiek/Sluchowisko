@@ -1,9 +1,14 @@
-"""Buduje stronę statusu gałęzi release i development dla GitHub Pages.
+"""Buduje stronę GitHub Pages z aplikacji na gałęziach release i development.
 
 Użycie: python3 .github/pages/build.py <katalog_wyjściowy>
 
-Strona główna pokazuje ostatnie commity, różnicę między gałęziami i otwarte PR-y.
-Jeśli gałąź ma katalog web/, jego zawartość trafia do /release/ albo /dev/.
+- /         aplikacja z web/ na gałęzi release (produkcja)
+- /dev/     aplikacja z web/ na gałęzi development
+- /status/  ostatnie commity, różnica między gałęziami i otwarte PR-y
+
+web/ jest publikowany bez zmian. Jeśli ma package.json, najpierw uruchamiane jest
+`npm ci && npm run build`, a publikowany jest web/dist. Ścieżka bazowa strony trafia
+do builda w zmiennej BASE_PATH (np. /opendatahackathon42/dev/).
 """
 
 import html
@@ -14,10 +19,12 @@ import subprocess
 import sys
 from datetime import datetime, timezone
 
-BRANCHES = [("release", "release"), ("development", "dev")]
+# (gałąź, podkatalog na stronie; "" to katalog główny)
+BRANCHES = [("release", ""), ("development", "dev")]
 REPO = os.environ.get("GITHUB_REPOSITORY", "")
 SERVER = os.environ.get("GITHUB_SERVER_URL", "https://github.com")
 REPO_URL = f"{SERVER}/{REPO}"
+BASE_PATH = os.environ.get("PAGES_BASE_PATH", "").rstrip("/")
 
 
 def run(*cmd):
@@ -45,16 +52,30 @@ def open_prs():
 
 
 def copy_web(branch, slug, out_dir):
-    """Kopiuje web/ z danej gałęzi do out_dir/slug. Zwraca True, jeśli było co kopiować."""
+    """Publikuje web/ z danej gałęzi w out_dir/slug. Zwraca True, jeśli było co publikować."""
     if subprocess.run(["git", "cat-file", "-e", f"origin/{branch}:web"], capture_output=True).returncode:
         return False
-    tmp = os.path.join(out_dir, f".tmp-{slug}")
+    tmp = os.path.join(out_dir, f".tmp-{slug or 'root'}")
     os.makedirs(tmp)
     archive = subprocess.run(["git", "archive", f"origin/{branch}", "web"], check=True, capture_output=True).stdout
     subprocess.run(["tar", "-x", "-C", tmp], input=archive, check=True)
-    shutil.move(os.path.join(tmp, "web"), os.path.join(out_dir, slug))
+    src = os.path.join(tmp, "web")
+    if os.path.exists(os.path.join(src, "package.json")):
+        env = {**os.environ, "BASE_PATH": f"{BASE_PATH}/{slug}/" if slug else f"{BASE_PATH}/"}
+        subprocess.run(["npm", "ci"], cwd=src, check=True, env=env)
+        subprocess.run(["npm", "run", "build"], cwd=src, check=True, env=env)
+        src = os.path.join(src, "dist")
+    shutil.copytree(src, os.path.join(out_dir, slug), dirs_exist_ok=True)
     shutil.rmtree(tmp)
     return True
+
+
+def placeholder(branch, slug, out_dir):
+    dest = os.path.join(out_dir, slug)
+    os.makedirs(dest, exist_ok=True)
+    status = "../status/" if slug else "status/"
+    with open(os.path.join(dest, "index.html"), "w", encoding="utf-8") as f:
+        f.write(PLACEHOLDER.format(branch=html.escape(branch), status=status))
 
 
 def ago(iso):
@@ -74,8 +95,8 @@ def branch_card(branch, slug, has_web):
         f'<li><a href="{REPO_URL}/commit/{e(h)}"><code>{e(h)}</code></a> {e(s)} <span class="muted">— {e(a)}</span></li>'
         for h, s, a in recent_commits(branch)
     )
-    preview = (f'<a class="btn" href="{slug}/">Otwórz podgląd</a>' if has_web
-               else '<span class="muted">Brak katalogu <code>web/</code> — podgląd pojawi się, gdy powstanie.</span>')
+    preview = (f'<a class="btn" href="../{slug + "/" if slug else ""}">Otwórz aplikację</a>' if has_web
+               else '<span class="muted">Brak katalogu <code>web/</code> — aplikacja pojawi się, gdy powstanie.</span>')
     return f"""
     <section class="card">
       <h2>{e(branch)}</h2>
@@ -108,7 +129,12 @@ def main():
     shutil.rmtree(out_dir, ignore_errors=True)
     os.makedirs(out_dir)
 
-    cards = "".join(branch_card(b, s, copy_web(b, s, out_dir)) for b, s in BRANCHES)
+    cards = ""
+    for branch, slug in BRANCHES:
+        has_web = copy_web(branch, slug, out_dir)
+        if not has_web:
+            placeholder(branch, slug, out_dir)
+        cards += branch_card(branch, slug, has_web)
     ahead = int(run("git", "rev-list", "--count", "origin/release..origin/development"))
     behind = int(run("git", "rev-list", "--count", "origin/development..origin/release"))
     if ahead == 0 and behind == 0:
@@ -122,7 +148,8 @@ def main():
     built = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     page = TEMPLATE.format(repo=html.escape(REPO), repo_url=REPO_URL, diff=diff, cards=cards,
                            prs=pr_rows(open_prs()), built=built)
-    with open(os.path.join(out_dir, "index.html"), "w", encoding="utf-8") as f:
+    os.makedirs(os.path.join(out_dir, "status"), exist_ok=True)
+    with open(os.path.join(out_dir, "status", "index.html"), "w", encoding="utf-8") as f:
         f.write(page)
     open(os.path.join(out_dir, ".nojekyll"), "w").close()
 
@@ -161,12 +188,36 @@ TEMPLATE = """<!doctype html>
 <body>
 <main>
   <h1>Status gałęzi</h1>
-  <p class="muted"><a href="{repo_url}">{repo}</a> · zbudowano {built}</p>
+  <p class="muted"><a href="{repo_url}">{repo}</a> · zbudowano {built} · <a href="../">produkcja</a> · <a href="../dev/">dev</a></p>
   <p>{diff}</p>
   <div class="grid">{cards}</div>
   <h2>Otwarte pull requesty</h2>
   <div class="table-wrap">{prs}</div>
 </main>
+</body>
+</html>
+"""
+
+PLACEHOLDER = """<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Muzeum w autobusie</title>
+<style>
+  :root {{ --bg:#f7f7f5; --fg:#1a1a1a; --muted:#6b6b6b; --accent:#1d5fd1; }}
+  @media (prefers-color-scheme: dark) {{ :root {{ --bg:#141414; --fg:#ececec; --muted:#9a9a9a; --accent:#7aa7ff; }} }}
+  body {{ margin:0; min-height:100vh; display:grid; place-items:center; background:var(--bg); color:var(--fg);
+         font:16px/1.5 system-ui, sans-serif; padding:16px; text-align:center; }}
+  a {{ color:var(--accent); }} .muted {{ color:var(--muted); }}
+</style>
+</head>
+<body>
+<div>
+  <h1>Muzeum w autobusie</h1>
+  <p class="muted">Gałąź <code>{branch}</code> nie ma jeszcze katalogu <code>web/</code>.</p>
+  <p><a href="{status}">Status gałęzi</a></p>
+</div>
 </body>
 </html>
 """
