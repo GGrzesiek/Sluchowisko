@@ -1,12 +1,11 @@
 import base64
 import hashlib
 import json
-import os
 from pathlib import Path
 
 import requests
 
-from story_agent.files import CACHE
+from story_agent.files import CACHE, env
 
 API = "https://api.elevenlabs.io"
 TIMEOUT_S = 180
@@ -18,11 +17,7 @@ class ElevenLabsError(Exception):
 
 
 def api_key() -> str:
-    key = os.getenv("ELEVENLABS_API_KEY", "").strip()
-    if not key and Path(".env").exists():
-        for line in Path(".env").read_text(encoding="utf-8").splitlines():
-            if line.startswith("ELEVENLABS_API_KEY="):
-                key = line.split("=", 1)[1].strip().strip('"')
+    key = env("ELEVENLABS_API_KEY")
     if not key:
         raise ElevenLabsError("ELEVENLABS_API_KEY is not set (put it in .env, never commit it)")
     return key
