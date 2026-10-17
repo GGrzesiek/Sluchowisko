@@ -17,6 +17,8 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      artifact_id: ${{ steps.upload.outputs.artifact_id }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -30,7 +32,8 @@ jobs:
           PAGES_BASE_PATH: ${{ steps.pages.outputs.base_path }}
         run: python3 .github/pages/build.py _site
 
-      - uses: actions/upload-pages-artifact@v3
+      - id: upload
+        uses: actions/upload-pages-artifact@v3
         with:
           path: _site
 
@@ -42,6 +45,26 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
-        uses: actions/deploy-pages@v4
         env:
-          GITHUB_SHA: ${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          GH_TOKEN: ${{ github.token }}
+          ARTIFACT_ID: ${{ needs.build.outputs.artifact_id }}
+        run: |
+          set -euo pipefail
+          oidc=$(curl -fsS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL" | jq -r .value)
+          deployment=$(gh api "repos/$GITHUB_REPOSITORY/pages/deployments" \
+            -F artifact_id="$ARTIFACT_ID" \
+            -f pages_build_version="$GITHUB_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" \
+            -f oidc_token="$oidc")
+          echo "page_url=$(jq -r .page_url <<<"$deployment")" >> "$GITHUB_OUTPUT"
+          id=$(jq -r .id <<<"$deployment")
+          for _ in $(seq 120); do
+            status=$(gh api "repos/$GITHUB_REPOSITORY/pages/deployments/$id" --jq .status)
+            echo "$status"
+            case "$status" in
+              succeed) exit 0 ;;
+              deployment_failed|deployment_content_failed|deployment_cancelled|deployment_lost|deployment_attempt_error)
+                echo "::error::Pages deployment ended with $status"; exit 1 ;;
+            esac
+            sleep 5
+          done
+          echo "::error::Pages deployment timed out"; exit 1
