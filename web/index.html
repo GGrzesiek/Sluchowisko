@@ -1,21 +1,13 @@
 <!doctype html>
 <html lang="pl">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Muzeum w autobusie</title>
-<style>
-  :root { --bg:#f7f7f5; --fg:#1a1a1a; --muted:#6b6b6b; }
-  @media (prefers-color-scheme: dark) { :root { --bg:#141414; --fg:#ececec; --muted:#9a9a9a; } }
-  body { margin:0; min-height:100vh; display:grid; place-items:center; background:var(--bg); color:var(--fg);
-         font:16px/1.5 system-ui, sans-serif; padding:16px; text-align:center; }
-  .muted { color:var(--muted); }
-</style>
-</head>
-<body>
-<div>
-  <h1>Muzeum w autobusie</h1>
-  <p class="muted">Tu powstaje aplikacja — pasek trasy, karta historii i „Skąd to wiemy?” (#16).</p>
-</div>
-</body>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#f5f2eb" />
+    <title>Muzeum w autobusie</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
 </html>

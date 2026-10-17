@@ -6,42 +6,45 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
-  pull-requests: read
+  contents: write
+  pages: read
 
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
-  build:
+  publish:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - id: pages
-        uses: actions/configure-pages@v5
-
       - name: Build site
         env:
           GH_TOKEN: ${{ github.token }}
-          PAGES_BASE_PATH: ${{ steps.pages.outputs.base_path }}
-        run: python3 .github/pages/build.py _site
+        run: |
+          set -euo pipefail
+          PAGES_BASE_PATH=$(gh api "repos/$GITHUB_REPOSITORY/pages" --jq '.html_url | sub("^https?://[^/]+"; "")')
+          export PAGES_BASE_PATH
+          python3 .github/pages/build.py _site
 
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: _site
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Publish to gh-pages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cd _site
+          git init -q -b gh-pages
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Deploy ${GITHUB_SHA::7} from $GITHUB_REF_NAME (run $GITHUB_RUN_ID)"
+          git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" gh-pages
+          {
+            echo "### Published to gh-pages"
+            for f in version.json dev/version.json; do
+              echo; echo "\`/$f\`"; echo '```json'; cat "$f"; echo; echo '```'
+            done
+          } >> "$GITHUB_STEP_SUMMARY"

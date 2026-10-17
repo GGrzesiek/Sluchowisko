@@ -1,0 +1,43 @@
+name: Project board
+
+on:
+  issues:
+    types: [opened, reopened, transferred]
+
+permissions: {}
+
+env:
+  PROJECT_ID: PVT_kwHOBKFsCs4BndnV
+  STATUS_FIELD_ID: PVTSSF_lAHOBKFsCs4BndnVzhmCIOo
+  STATUS_TODO_ID: 4ecf1c3f
+
+jobs:
+  add:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Add issue to the board as Todo
+        env:
+          GH_TOKEN: ${{ secrets.PROJECT_TOKEN }}
+          ISSUE_ID: ${{ github.event.issue.node_id }}
+          ISSUE_URL: ${{ github.event.issue.html_url }}
+          ADD_ITEM: |
+            mutation($project: ID!, $content: ID!) {
+              addProjectV2ItemById(input: {projectId: $project, contentId: $content}) { item { id } }
+            }
+          SET_STATUS: |
+            mutation($project: ID!, $item: ID!, $field: ID!, $option: String!) {
+              updateProjectV2ItemFieldValue(
+                input: {projectId: $project, itemId: $item, fieldId: $field, value: {singleSelectOptionId: $option}}
+              ) { projectV2Item { id } }
+            }
+        run: |
+          set -euo pipefail
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::error::Secret PROJECT_TOKEN is missing. Add a classic PAT with the 'project' scope."
+            exit 1
+          fi
+          item_id=$(gh api graphql -f query="$ADD_ITEM" -f project="$PROJECT_ID" -f content="$ISSUE_ID" \
+            --jq .data.addProjectV2ItemById.item.id)
+          gh api graphql -f query="$SET_STATUS" -f project="$PROJECT_ID" -f item="$item_id" \
+            -f field="$STATUS_FIELD_ID" -f option="$STATUS_TODO_ID" --silent
+          echo "Added $ISSUE_URL to the project board as Todo" >> "$GITHUB_STEP_SUMMARY"

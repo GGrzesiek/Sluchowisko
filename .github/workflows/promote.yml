@@ -1,0 +1,55 @@
+name: Promote to release
+
+on:
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: Commit on development to promote (empty = latest development)
+        required: false
+        default: ""
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [development]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: promote
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ssh-key: ${{ secrets.PROMOTE_DEPLOY_KEY }}
+
+      - name: Fast-forward release
+        env:
+          SHA: ${{ inputs.sha || github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          target=$(git rev-parse --verify "${SHA:-origin/development}^{commit}")
+          if ! git merge-base --is-ancestor "$target" origin/development; then
+            echo "::error::$target is not on development"; exit 1
+          fi
+          if git merge-base --is-ancestor "$target" origin/release; then
+            echo "release already contains $target, nothing to do" >> "$GITHUB_STEP_SUMMARY"; exit 0
+          fi
+          if ! git merge-base --is-ancestor origin/release "$target"; then
+            echo "::error::release has commits that are not in $target, cannot fast-forward"; exit 1
+          fi
+
+          tag="release-$(date -u +%Y-%m-%d-%H%M%S)"
+          changes=$(git log --format="- \`%h\` %s (%an)" "origin/release..$target")
+          git tag "$tag" "$target"
+          git push --atomic origin "$target:refs/heads/release" "refs/tags/$tag"
+
+          printf "### release → \`%s\` (\`%s\`)\n\n%s\n" "${target:0:7}" "$tag" "$changes" >> "$GITHUB_STEP_SUMMARY"
