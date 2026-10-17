@@ -11,3 +11,4 @@ export * from "./Chrome";
 export * from "./NowPlaying";
 export * from "./Progress";
 export * from "./SepiaImage";
+export * from "./BusAnimation";

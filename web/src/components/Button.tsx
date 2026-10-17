@@ -3,7 +3,7 @@ import { cx } from "../cx";
 import { PauseGlyph, PlayGlyph } from "./Icon";
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: "primary" | "secondary" | "ghost";
+  variant?: "primary" | "secondary" | "outline" | "ghost";
   size?: "lg" | "md";
   icon?: ReactNode;
 };
@@ -28,6 +28,8 @@ export function Button({
             : "h-[58px] gap-2.5 rounded-[18px] bg-bus text-lg text-cream"),
         variant === "secondary" &&
           "h-[52px] gap-2.5 rounded-2xl border-2 border-charcoal bg-transparent px-4 text-[17px] text-charcoal",
+        variant === "outline" &&
+          "h-16 gap-3 rounded-[20px] border-[1.5px] border-charcoal bg-transparent px-4 text-xl text-charcoal",
         variant === "ghost" &&
           "h-12 rounded-[14px] border-[1.5px] border-road bg-transparent px-4 text-[15px] font-bold text-charcoal",
         className,

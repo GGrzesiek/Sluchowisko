@@ -1,7 +1,12 @@
 import { render, screen } from "@testing-library/react";
-import { LineBadge, NowPlayingBar, RouteStrip, StoryCard } from ".";
+import { BusAnimation, LineBadge, NowPlayingBar, RouteStrip, StoryCard } from ".";
 
 describe("components", () => {
+  it("describes the bus animation for assistive tech", () => {
+    render(<BusAnimation />);
+    expect(screen.getByRole("img", { name: "Animacja: ogórek jedzie przez ekran" })).toBeInTheDocument();
+  });
+
   it("labels a line badge for assistive tech", () => {
     render(<LineBadge line="180" kind="bus" />);
     expect(screen.getByRole("img", { name: "Autobus 180" })).toBeInTheDocument();
