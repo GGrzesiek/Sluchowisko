@@ -1,4 +1,5 @@
 """Import static city data (stops, lines, routes) into the DB. Run daily: routes change with roadworks."""
+
 import re
 
 from django.db import transaction
@@ -40,8 +41,12 @@ def sync_stops(rows: list[dict] | None = None) -> int:
         key = (str(r.get("zespol", "")), str(r.get("slupek", "")))
         if not all(key) or lat is None or lon is None:
             continue
-        fields = {"name": r.get("nazwa_zespolu", ""), "lat": lat, "lon": lon,
-                  "direction": r.get("kierunek") or ""}
+        fields = {
+            "name": r.get("nazwa_zespolu", ""),
+            "lat": lat,
+            "lon": lon,
+            "direction": r.get("kierunek") or "",
+        }
         if key in existing:
             s = existing[key]
             for k, v in fields.items():
@@ -85,16 +90,28 @@ def sync_routes(data: dict) -> dict:
                 if stop:
                     names.append(stop.name)
                 dist = _float(p.get("odleglosc"))
-                route_stops.append(RouteStop(
-                    route=route, order=int(order), zespol=key[0], slupek=key[1], stop=stop,
-                    street_id=str(p.get("ulica_id") or ""), stop_type=str(p.get("typ") or ""),
-                    distance_m=int(dist) if dist is not None else None,
-                ))
+                route_stops.append(
+                    RouteStop(
+                        route=route,
+                        order=int(order),
+                        zespol=key[0],
+                        slupek=key[1],
+                        stop=stop,
+                        street_id=str(p.get("ulica_id") or ""),
+                        stop_type=str(p.get("typ") or ""),
+                        distance_m=int(dist) if dist is not None else None,
+                    )
+                )
             if names:
                 route.first_stop_name, route.last_stop_name = names[0], names[-1]
                 route.save(update_fields=["first_stop_name", "last_stop_name"])
 
     RouteStop.objects.bulk_create(route_stops, batch_size=2000)
     removed, _ = Line.objects.exclude(number__in=seen_lines).delete()  # lines that no longer exist
-    return {"lines": len(seen_lines), "routes": route_count, "route_stops": len(route_stops),
-            "unmatched_stops": sum(1 for rs in route_stops if rs.stop is None), "removed": removed}
+    return {
+        "lines": len(seen_lines),
+        "routes": route_count,
+        "route_stops": len(route_stops),
+        "unmatched_stops": sum(1 for rs in route_stops if rs.stop is None),
+        "removed": removed,
+    }

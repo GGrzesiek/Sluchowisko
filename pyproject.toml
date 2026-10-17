@@ -1,0 +1,21 @@
+[tool.ruff]
+line-length = 110
+target-version = "py311"
+extend-exclude = ["*/migrations/*", ".venv"]
+
+[tool.ruff.lint]
+select = [
+  "E", "W",   # pycodestyle
+  "F",        # pyflakes: unused imports/variables, undefined names
+  "I",        # import sorting
+  "B",        # bugbear: likely bugs
+  "UP",       # modern Python syntax
+  "DJ",       # Django-specific checks
+]
+ignore = ["E501"]  # long lines are handled by the formatter
+
+[tool.ruff.lint.isort]
+known-first-party = ["config", "transit", "facts"]
+
+[tool.ruff.format]
+quote-style = "double"

@@ -35,7 +35,9 @@ class RideFlowTest(TestCase):
         self.assertIn("Prezent, o który nikt nie prosił", titles)
 
         fact_id = r.json()["facts"][0]["id"]
-        self.assertEqual(self.client.post(f"/api/facts/{fact_id}/seen/", HTTP_X_DEVICE_ID="dev-1").status_code, 204)
+        self.assertEqual(
+            self.client.post(f"/api/facts/{fact_id}/seen/", HTTP_X_DEVICE_ID="dev-1").status_code, 204
+        )
         r2 = self.client.get("/api/ride/3201/", HTTP_X_DEVICE_ID="dev-1")
         self.assertNotIn(fact_id, [f["id"] for f in r2.json()["facts"]])
 
@@ -51,13 +53,23 @@ class RideFlowTest(TestCase):
 
 @override_settings(WARSAW_API_KEY="x")
 class ApiClientTest(TestCase):
-    @patch("transit.warsaw_api.requests.get")
+    @patch("transit.warsaw_api.requests.post")
     def test_parses_feed_and_skips_bad_rows(self, get):
-        get.return_value = MagicMock(json=lambda: {"result": [
-            {"Lines": "17", "Lon": 21.0, "VehicleNumber": "3201", "Time": "2026-10-17 12:00:00",
-             "Lat": 52.2, "Brigade": "5"},
-            {"Lines": "17", "VehicleNumber": "bad"},
-        ]})
+        get.return_value = MagicMock(
+            json=lambda: {
+                "result": [
+                    {
+                        "Lines": "17",
+                        "Lon": 21.0,
+                        "VehicleNumber": "3201",
+                        "Time": "2026-10-17 12:00:00",
+                        "Lat": 52.2,
+                        "Brigade": "5",
+                    },
+                    {"Lines": "17", "VehicleNumber": "bad"},
+                ]
+            }
+        )
         out = fetch_vehicle_positions(line="17")
         self.assertEqual(len(out), 1)
         self.assertEqual(out[0].vehicle_number, "3201")

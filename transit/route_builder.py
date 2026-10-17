@@ -8,6 +8,7 @@ There is no "routes" dataset, so the order of stops is reconstructed from the ti
 one brigade drives a route variant ("trasa", e.g. TP-FSO) stop after stop, so sorting the stops
 by that brigade's earliest departure time gives the stops in driving order.
 """
+
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import timedelta
@@ -41,8 +42,9 @@ def _parallel(func, items, workers):
                 yield futures[f], None, e
 
 
-def crawl_stop_lines(stops=None, workers: int | None = None, max_age_hours: float | None = None,
-                     progress=None) -> dict:
+def crawl_stop_lines(
+    stops=None, workers: int | None = None, max_age_hours: float | None = None, progress=None
+) -> dict:
     """Ask "which lines stop here?" for every stop post. ~1 request per stop post, run in parallel.
 
     max_age_hours: skip stops checked more recently than this (makes the crawl resumable).
@@ -55,8 +57,9 @@ def crawl_stop_lines(stops=None, workers: int | None = None, max_age_hours: floa
 
     done = errors = 0
     first_error = None
-    for stop, lines, err in _parallel(lambda s: warsaw_api.fetch_lines_at_stop(s.zespol, s.slupek),
-                                      stops, workers):
+    for stop, lines, err in _parallel(
+        lambda s: warsaw_api.fetch_lines_at_stop(s.zespol, s.slupek), stops, workers
+    ):
         if err:
             errors += 1
             first_error = first_error or err
@@ -73,8 +76,12 @@ def crawl_stop_lines(stops=None, workers: int | None = None, max_age_hours: floa
     # every line seen anywhere becomes a Line row
     for number in StopLine.objects.values_list("line", flat=True).distinct():
         Line.objects.update_or_create(number=number, defaults={"kind": classify_line(number)})
-    return {"stops_checked": done, "errors": errors, "first_error": str(first_error) if first_error else None,
-            "lines": Line.objects.count()}
+    return {
+        "stops_checked": done,
+        "errors": errors,
+        "first_error": str(first_error) if first_error else None,
+        "lines": Line.objects.count(),
+    }
 
 
 def order_route(times_by_brigade: dict) -> list:
@@ -84,7 +91,9 @@ def order_route(times_by_brigade: dict) -> list:
     """
     if not times_by_brigade:
         return []
-    best = max(times_by_brigade.values(), key=lambda by_stop: (len(by_stop), -min(min(t) for t in by_stop.values())))
+    best = max(
+        times_by_brigade.values(), key=lambda by_stop: (len(by_stop), -min(min(t) for t in by_stop.values()))
+    )
     return [stop for stop, _ in sorted(best.items(), key=lambda kv: min(kv[1]))]
 
 
@@ -94,14 +103,16 @@ def build_line_routes(line_number: str, workers: int | None = None) -> dict:
     stops = list(Stop.objects.filter(stop_lines__line=line_number))
     if not stops:
         raise warsaw_api.WarsawApiError(
-            f"No stops known for line {line_number}. Run crawl_stop_lines (sync_city_data) first.")
+            f"No stops known for line {line_number}. Run crawl_stop_lines (sync_city_data) first."
+        )
 
     # route code -> brigade -> stop -> [times];  route code -> direction name
     times = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
     direction = {}
     errors = 0
-    for stop, deps, err in _parallel(lambda s: warsaw_api.fetch_departures(s.zespol, s.slupek, line_number),
-                                     stops, workers):
+    for stop, deps, err in _parallel(
+        lambda s: warsaw_api.fetch_departures(s.zespol, s.slupek, line_number), stops, workers
+    ):
         if err:
             errors += 1
             continue
@@ -115,8 +126,9 @@ def build_line_routes(line_number: str, workers: int | None = None) -> dict:
 
     by_pk = {s.pk: s for s in stops}
     with transaction.atomic():
-        line, _ = Line.objects.update_or_create(number=line_number,
-                                                defaults={"kind": classify_line(line_number)})
+        line, _ = Line.objects.update_or_create(
+            number=line_number, defaults={"kind": classify_line(line_number)}
+        )
         line.routes.all().delete()
         built = []
         for code, by_brigade in sorted(times.items()):
@@ -124,13 +136,17 @@ def build_line_routes(line_number: str, workers: int | None = None) -> dict:
             if len(ordered) < 2:
                 continue
             route = Route.objects.create(
-                line=line, code=code, stop_count=len(ordered),
+                line=line,
+                code=code,
+                stop_count=len(ordered),
                 first_stop_name=ordered[0].name,
                 last_stop_name=direction.get(code) or ordered[-1].name,
             )
-            RouteStop.objects.bulk_create([
-                RouteStop(route=route, order=i + 1, zespol=s.zespol, slupek=s.slupek, stop=s)
-                for i, s in enumerate(ordered)
-            ])
+            RouteStop.objects.bulk_create(
+                [
+                    RouteStop(route=route, order=i + 1, zespol=s.zespol, slupek=s.slupek, stop=s)
+                    for i, s in enumerate(ordered)
+                ]
+            )
             built.append({"code": code, "direction": route.last_stop_name, "stops": len(ordered)})
     return {"line": line_number, "stops_queried": len(stops), "errors": errors, "routes": built}

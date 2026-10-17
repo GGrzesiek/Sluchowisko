@@ -18,8 +18,6 @@ class StopAdmin(admin.ModelAdmin):
 admin.site.register(PositionLog)
 
 
-
-
 class RouteInline(admin.TabularInline):
     model = Route
     extra = 0

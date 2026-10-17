@@ -27,7 +27,10 @@ class Command(BaseCommand):
         text = json.dumps(ctx, ensure_ascii=False, indent=2)
         if output:
             Path(output).write_text(text, encoding="utf-8")
-            self.stdout.write(self.style.SUCCESS(
-                f"Wrote {output}: {ctx['route']['stop_count']} stops, {ctx['route']['length_km']} km"))
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f"Wrote {output}: {ctx['route']['stop_count']} stops, {ctx['route']['length_km']} km"
+                )
+            )
         else:
             self.stdout.write(text)

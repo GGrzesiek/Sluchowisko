@@ -6,15 +6,20 @@ from transit.warsaw_api import WarsawApiError
 
 
 class Command(BaseCommand):
-    help = ("Build ordered routes from the departures timetable. "
-            "build_routes --line 17 --line 4  |  build_routes --all [--kind tram] [--skip-built]")
+    help = (
+        "Build ordered routes from the departures timetable. "
+        "build_routes --line 17 --line 4  |  build_routes --all [--kind tram] [--skip-built]"
+    )
 
     def add_arguments(self, parser):
         parser.add_argument("--line", action="append", help="Line number, can be repeated")
         parser.add_argument("--all", action="store_true", help="Every line found by sync_city_data")
         parser.add_argument("--kind", help="With --all: only tram / bus / night / suburban / ...")
-        parser.add_argument("--skip-built", action="store_true",
-                            help="With --all: skip lines that already have routes (resume an interrupted run)")
+        parser.add_argument(
+            "--skip-built",
+            action="store_true",
+            help="With --all: skip lines that already have routes (resume an interrupted run)",
+        )
         parser.add_argument("--workers", type=int)
 
     def handle(self, line, all, kind, skip_built, workers, **_):
@@ -46,14 +51,19 @@ class Command(BaseCommand):
                 self.stderr.write(f"[{i}/{len(numbers)}] line {number}: unexpected error {e!r}")
                 continue
             ok += 1
-            self.stdout.write(self.style.SUCCESS(
-                f"[{i}/{len(numbers)}] line {number}: {len(r['routes'])} routes from "
-                f"{r['stops_queried']} stop posts ({r['errors']} errors)"))
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f"[{i}/{len(numbers)}] line {number}: {len(r['routes'])} routes from "
+                    f"{r['stops_queried']} stop posts ({r['errors']} errors)"
+                )
+            )
             if len(numbers) == 1 or not all:
                 for rt in r["routes"]:
                     self.stdout.write(f"    {rt['code']:<10} -> {rt['direction']:<30} {rt['stops']} stops")
 
-        self.stdout.write(f"Done: {ok} lines built, {len(failed)} failed"
-                          + (f" ({', '.join(failed[:20])}{'...' if len(failed) > 20 else ''})" if failed else ""))
+        self.stdout.write(
+            f"Done: {ok} lines built, {len(failed)} failed"
+            + (f" ({', '.join(failed[:20])}{'...' if len(failed) > 20 else ''})" if failed else "")
+        )
         if failed and all:
             self.stdout.write("Re-run with --all --skip-built to retry only the missing ones.")

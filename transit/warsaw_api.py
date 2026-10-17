@@ -7,10 +7,11 @@ Every call is: POST {WARSAW_API_BASE}/{action}
 Responses are tolerated in several shapes: a plain list (what positions return), or
 {"result": [...]} / {"data": [...]} like the old api.um.warszawa.pl platform.
 """
+
 import time
+from collections.abc import Iterator
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Iterator
 
 import requests
 from django.conf import settings
@@ -45,8 +46,9 @@ def _request(action: str, body: dict | None = None, timeout: int = 20):
     last_error = None
     for attempt in range(RETRIES):
         try:
-            resp = requests.post(f"{settings.WARSAW_API_BASE}/{action}", json=body or {},
-                                 headers=headers, timeout=timeout)
+            resp = requests.post(
+                f"{settings.WARSAW_API_BASE}/{action}", json=body or {}, headers=headers, timeout=timeout
+            )
             if resp.status_code in (401, 403):
                 raise WarsawApiError(f"Token rejected ({resp.status_code}): {resp.text[:200]}")
             resp.raise_for_status()
@@ -113,6 +115,7 @@ def iter_paged(action: str, body: dict | None = None, page_size: int = DEFAULT_P
 
 # ---------- Live positions ----------
 
+
 def fetch_vehicle_positions(line: str | None = None, vehicle_type: int = 2) -> list[VehicleReading]:
     """Live positions, refreshed roughly every 10 s. type: 1 = bus, 2 = tram.
 
@@ -163,6 +166,7 @@ def fetch_lines_at_stop(zespol: str, slupek: str) -> list[str]:
 
 def fetch_departures(zespol: str, slupek: str, line: str) -> list[dict]:
     """Departures of a line from a stop post: brygada, kierunek, trasa, czas ("HH:MM:SS", can be >24h)."""
-    rows = _get_list(settings.WARSAW_DEPARTURES_ACTION,
-                     {STOP_ID_PARAM: zespol, STOP_NR_PARAM: slupek, LINE_PARAM: line})
+    rows = _get_list(
+        settings.WARSAW_DEPARTURES_ACTION, {STOP_ID_PARAM: zespol, STOP_NR_PARAM: slupek, LINE_PARAM: line}
+    )
     return [r for r in map(_flat, rows) if r.get("czas")]

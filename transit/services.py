@@ -24,8 +24,12 @@ def ingest_readings(readings: list[VehicleReading]) -> int:
         )
         if v is None:
             Vehicle.objects.create(
-                number=r.vehicle_number, line=r.line, brigade=r.brigade,
-                lat=r.lat, lon=r.lon, reported_at=r.time,
+                number=r.vehicle_number,
+                line=r.line,
+                brigade=r.brigade,
+                lat=r.lat,
+                lon=r.lon,
+                reported_at=r.time,
             )
             continue
         moved = haversine_m(v.lat, v.lon, r.lat, r.lon)

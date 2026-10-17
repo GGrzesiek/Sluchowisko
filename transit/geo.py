@@ -1,5 +1,6 @@
 """Small geo helpers. Plain Python so the project runs on SQLite with zero setup.
 If the dataset grows, switch to GeoDjango + PostGIS and replace these with DB queries."""
+
 import math
 
 EARTH_R = 6_371_000  # metres

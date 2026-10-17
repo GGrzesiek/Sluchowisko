@@ -53,10 +53,20 @@ class PositionLog(models.Model):
     class Meta:
         unique_together = ("vehicle_number", "reported_at")
 
+    def __str__(self):
+        return f"{self.vehicle_number} ({self.line}) at {self.reported_at:%H:%M:%S}"
+
 
 class Line(models.Model):
     TRAM, BUS, NIGHT, SUBURBAN, EXPRESS, REPLACEMENT, OTHER = (
-        "tram", "bus", "night", "suburban", "express", "replacement", "other")
+        "tram",
+        "bus",
+        "night",
+        "suburban",
+        "express",
+        "replacement",
+        "other",
+    )
     KIND_CHOICES = [(k, k) for k in (TRAM, BUS, NIGHT, SUBURBAN, EXPRESS, REPLACEMENT, OTHER)]
 
     number = models.CharField(max_length=10, primary_key=True)  # "17", "180", "N37", "L-1"...
@@ -112,6 +122,10 @@ class RouteStop(models.Model):
         unique_together = ("route", "order")
         indexes = [models.Index(fields=["zespol", "slupek"])]
 
+    def __str__(self):
+        return f"{self.route} #{self.order}: {self.zespol}-{self.slupek}"
+
+
 class StopLine(models.Model):
     """Which line stops at which stop post (from "Linie dostępne na przystanku")."""
 
@@ -120,3 +134,6 @@ class StopLine(models.Model):
 
     class Meta:
         unique_together = ("stop", "line")
+
+    def __str__(self):
+        return f"line {self.line} at {self.stop}"

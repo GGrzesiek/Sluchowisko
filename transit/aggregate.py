@@ -6,6 +6,7 @@ Every row has exactly the same keys (null when not applicable), no nesting.
   vehicle -> nearest stop (+ distance)
   stop    -> how many vehicles are near it now, which one is closest, which lines serve it
 """
+
 import math
 from collections import defaultdict
 
@@ -21,17 +22,23 @@ CELL_DEG = 0.005  # ~550 m x 350 m grid cells for fast nearest-neighbour search
 LIVE_CACHE_SECONDS = 10
 
 COLUMNS = [
-    "type",                     # "stop" | "vehicle"
-    "id",                       # stop: "zespol-slupek", vehicle: side number
-    "name",                     # stop name / "Tram 17 #3201"
-    "lines",                    # stop: lines serving it "17,33"; vehicle: its line
-    "lat", "lon",
-    "time",                     # vehicle: GPS time from the API; stop: null
+    "type",  # "stop" | "vehicle"
+    "id",  # stop: "zespol-slupek", vehicle: side number
+    "name",  # stop name / "Tram 17 #3201"
+    "lines",  # stop: lines serving it "17,33"; vehicle: its line
+    "lat",
+    "lon",
+    "time",  # vehicle: GPS time from the API; stop: null
     "brigade",
-    "heading_deg", "speed_kmh",  # vehicle, computed from the last two readings
-    "direction",                # stop: direction from the API
-    "nearest_stop_id", "nearest_stop_name", "nearest_stop_distance_m",   # vehicle -> stop
-    "vehicles_nearby", "nearest_vehicle_id", "nearest_vehicle_distance_m",  # stop -> vehicles
+    "heading_deg",
+    "speed_kmh",  # vehicle, computed from the last two readings
+    "direction",  # stop: direction from the API
+    "nearest_stop_id",
+    "nearest_stop_name",
+    "nearest_stop_distance_m",  # vehicle -> stop
+    "vehicles_nearby",
+    "nearest_vehicle_id",
+    "nearest_vehicle_distance_m",  # stop -> vehicles
     "fetched_at",
 ]
 
@@ -74,8 +81,13 @@ def live_readings(vehicle_type: int, line: str | None):
     return readings
 
 
-def build_snapshot(vehicle_type: int = 2, line: str | None = None, only: str | None = None,
-                   radius_m: int = 500, max_age_s: int = 300) -> list[dict]:
+def build_snapshot(
+    vehicle_type: int = 2,
+    line: str | None = None,
+    only: str | None = None,
+    radius_m: int = 500,
+    max_age_s: int = 300,
+) -> list[dict]:
     """vehicle_type: 1 = bus, 2 = tram. line: restrict to one line (and the stops it serves)."""
     now = timezone.now()
     fetched_at = now.isoformat(timespec="seconds")
@@ -91,8 +103,9 @@ def build_snapshot(vehicle_type: int = 2, line: str | None = None, only: str | N
         if on_line:
             stops = [s for s in stops if (s.zespol, s.slupek) in on_line]
 
-    readings = [r for r in live_readings(vehicle_type, line)
-                if (now - r.time).total_seconds() <= max_age_s]  # the feed contains old ghosts
+    readings = [
+        r for r in live_readings(vehicle_type, line) if (now - r.time).total_seconds() <= max_age_s
+    ]  # the feed contains old ghosts
     state = {v.number: v for v in Vehicle.objects.filter(number__in=[r.vehicle_number for r in readings])}
     kind = "Tram" if vehicle_type == 2 else "Bus"
 
@@ -105,28 +118,42 @@ def build_snapshot(vehicle_type: int = 2, line: str | None = None, only: str | N
             near = stop_grid.near(r.lat, r.lon, radius_m)
             d, s = near[0] if near else (None, None)
             v = state.get(r.vehicle_number)
-            rows.append(_row(
-                type="vehicle", id=r.vehicle_number, name=f"{kind} {r.line} #{r.vehicle_number}",
-                lines=r.line, lat=r.lat, lon=r.lon, time=r.time.isoformat(timespec="seconds"),
-                brigade=r.brigade,
-                heading_deg=round(v.heading) if v and v.heading is not None else None,
-                speed_kmh=round(v.speed_mps * 3.6, 1) if v and v.speed_mps is not None else None,
-                nearest_stop_id=f"{s.zespol}-{s.slupek}" if s else None,
-                nearest_stop_name=s.name if s else None,
-                nearest_stop_distance_m=round(d) if s else None,
-                fetched_at=fetched_at,
-            ))
+            rows.append(
+                _row(
+                    type="vehicle",
+                    id=r.vehicle_number,
+                    name=f"{kind} {r.line} #{r.vehicle_number}",
+                    lines=r.line,
+                    lat=r.lat,
+                    lon=r.lon,
+                    time=r.time.isoformat(timespec="seconds"),
+                    brigade=r.brigade,
+                    heading_deg=round(v.heading) if v and v.heading is not None else None,
+                    speed_kmh=round(v.speed_mps * 3.6, 1) if v and v.speed_mps is not None else None,
+                    nearest_stop_id=f"{s.zespol}-{s.slupek}" if s else None,
+                    nearest_stop_name=s.name if s else None,
+                    nearest_stop_distance_m=round(d) if s else None,
+                    fetched_at=fetched_at,
+                )
+            )
 
     if only != "vehicles":
         for s in stops:
             near = vehicle_grid.near(s.lat, s.lon, radius_m)
-            rows.append(_row(
-                type="stop", id=f"{s.zespol}-{s.slupek}", name=s.name,
-                lines=",".join(sorted(lines_at.get((s.zespol, s.slupek), ()), key=lambda x: (len(x), x))) or None,
-                lat=s.lat, lon=s.lon, direction=s.direction or None,
-                vehicles_nearby=len(near),
-                nearest_vehicle_id=near[0][1].vehicle_number if near else None,
-                nearest_vehicle_distance_m=round(near[0][0]) if near else None,
-                fetched_at=fetched_at,
-            ))
+            rows.append(
+                _row(
+                    type="stop",
+                    id=f"{s.zespol}-{s.slupek}",
+                    name=s.name,
+                    lines=",".join(sorted(lines_at.get((s.zespol, s.slupek), ()), key=lambda x: (len(x), x)))
+                    or None,
+                    lat=s.lat,
+                    lon=s.lon,
+                    direction=s.direction or None,
+                    vehicles_nearby=len(near),
+                    nearest_vehicle_id=near[0][1].vehicle_number if near else None,
+                    nearest_vehicle_distance_m=round(near[0][0]) if near else None,
+                    fetched_at=fetched_at,
+                )
+            )
     return rows

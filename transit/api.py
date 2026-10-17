@@ -15,6 +15,7 @@ LIVE_CACHE_SECONDS = 10  # the city refreshes positions every ~10 s, no point as
 
 # ---------- serializers ----------
 
+
 class RouteStopSerializer(serializers.ModelSerializer):
     name = serializers.CharField(source="stop.name", default=None)
     lat = serializers.FloatField(source="stop.lat", default=None)
@@ -62,6 +63,7 @@ class LineDetailSerializer(LineSerializer):
 
 # ---------- views ----------
 
+
 class LineViewSet(viewsets.ReadOnlyModelViewSet):
     """
     GET /api/lines/                         all lines (paginated) ?kind=tram|bus|night|...  ?search=1
@@ -77,8 +79,11 @@ class LineViewSet(viewsets.ReadOnlyModelViewSet):
     lookup_value_regex = "[^/]+"
 
     def get_queryset(self):
-        qs = (Line.objects.annotate(route_count=Count("routes")).prefetch_related("routes")
-              .order_by("kind", Length("number"), "number"))  # 4, 17, 105 (not 105, 17, 4)
+        qs = (
+            Line.objects.annotate(route_count=Count("routes"))
+            .prefetch_related("routes")
+            .order_by("kind", Length("number"), "number")
+        )  # 4, 17, 105 (not 105, 17, 4)
         if kind := self.request.query_params.get("kind"):
             qs = qs.filter(kind=kind)
         if search := self.request.query_params.get("search"):
@@ -91,7 +96,8 @@ class LineViewSet(viewsets.ReadOnlyModelViewSet):
     def _route(self, number, code):
         return get_object_or_404(
             Route.objects.prefetch_related(Prefetch("stops", RouteStop.objects.select_related("stop"))),
-            line_id=number, code=code,
+            line_id=number,
+            code=code,
         )
 
     @action(detail=True, url_path=r"routes/(?P<code>[^/]+)")
@@ -102,15 +108,20 @@ class LineViewSet(viewsets.ReadOnlyModelViewSet):
     def route_geojson(self, request, number=None, code=None):
         route = self._route(number, code)
         pts = [rs for rs in route.stops.all() if rs.stop]
-        features = [{
-            "type": "Feature",
-            "geometry": {"type": "LineString", "coordinates": [[p.stop.lon, p.stop.lat] for p in pts]},
-            "properties": {"line": number, "route": code, "direction": route.last_stop_name},
-        }] + [{
-            "type": "Feature",
-            "geometry": {"type": "Point", "coordinates": [p.stop.lon, p.stop.lat]},
-            "properties": {"order": p.order, "name": p.stop.name, "zespol": p.zespol, "slupek": p.slupek},
-        } for p in pts]
+        features = [
+            {
+                "type": "Feature",
+                "geometry": {"type": "LineString", "coordinates": [[p.stop.lon, p.stop.lat] for p in pts]},
+                "properties": {"line": number, "route": code, "direction": route.last_stop_name},
+            }
+        ] + [
+            {
+                "type": "Feature",
+                "geometry": {"type": "Point", "coordinates": [p.stop.lon, p.stop.lat]},
+                "properties": {"order": p.order, "name": p.stop.name, "zespol": p.zespol, "slupek": p.slupek},
+            }
+            for p in pts
+        ]
         return Response({"type": "FeatureCollection", "features": features})
 
     @action(detail=True)
@@ -120,11 +131,21 @@ class LineViewSet(viewsets.ReadOnlyModelViewSet):
         data = cache.get(key)
         if data is None:
             try:
-                readings = warsaw_api.fetch_vehicle_positions(line=line.number, vehicle_type=line.vehicle_type)
+                readings = warsaw_api.fetch_vehicle_positions(
+                    line=line.number, vehicle_type=line.vehicle_type
+                )
             except warsaw_api.WarsawApiError as e:
                 return Response({"detail": f"City API unavailable: {e}"}, status=status.HTTP_502_BAD_GATEWAY)
-            data = [{"vehicle_number": r.vehicle_number, "brigade": r.brigade, "lat": r.lat,
-                     "lon": r.lon, "time": r.time.isoformat()} for r in readings]
+            data = [
+                {
+                    "vehicle_number": r.vehicle_number,
+                    "brigade": r.brigade,
+                    "lat": r.lat,
+                    "lon": r.lon,
+                    "time": r.time.isoformat(),
+                }
+                for r in readings
+            ]
             cache.set(key, data, LIVE_CACHE_SECONDS)
         return Response({"line": line.number, "count": len(data), "vehicles": data})
 
@@ -132,11 +153,16 @@ class LineViewSet(viewsets.ReadOnlyModelViewSet):
     def llm_context(self, request, number=None):
         line = get_object_or_404(Line, number=number)
         corridor = request.query_params.get("corridor")
-        ctx = build_line_context(line, route_code=request.query_params.get("route"),
-                                 include_task=request.query_params.get("bare") != "1",
-                                 corridor_m=int(corridor) if corridor and corridor.isdigit() else None)
+        ctx = build_line_context(
+            line,
+            route_code=request.query_params.get("route"),
+            include_task=request.query_params.get("bare") != "1",
+            corridor_m=int(corridor) if corridor and corridor.isdigit() else None,
+        )
         if ctx is None:
-            return Response({"detail": "No route for this line, run sync_city_data"}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"detail": "No route for this line, run sync_city_data"}, status=status.HTTP_404_NOT_FOUND
+            )
         return Response(ctx)
 
     @action(detail=True, methods=["post"], url_path="validate-places")
@@ -145,6 +171,7 @@ class LineViewSet(viewsets.ReadOnlyModelViewSet):
 
         line = get_object_or_404(Line, number=number)
         ctx = build_line_context(line, route_code=request.query_params.get("route"), include_task=False)
-        report = validate_places(request.data, ctx["stops"] if ctx else None,
-                                 corridor_m=ctx["corridor_m"] if ctx else 400)
+        report = validate_places(
+            request.data, ctx["stops"] if ctx else None, corridor_m=ctx["corridor_m"] if ctx else 400
+        )
         return Response({"valid_count": len(report["valid"]), **report})

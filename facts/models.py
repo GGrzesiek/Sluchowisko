@@ -44,3 +44,6 @@ class SeenFact(models.Model):
 
     class Meta:
         unique_together = ("device_id", "fact")
+
+    def __str__(self):
+        return f"{self.device_id[:8]} saw fact {self.fact_id}"

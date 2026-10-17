@@ -20,15 +20,17 @@ def _device_id(request):
 def ride(request, vehicle_number):
     """Main endpoint: the QR code opens /ride/<vehicle_number>, the app polls this every ~10 s."""
     v = get_object_or_404(Vehicle, number=vehicle_number)
-    (lat, lon), items = upcoming_facts(v, _device_id(request), limit=int(request.query_params.get("limit", 5)))
-    return Response({
-        "vehicle": VehicleSerializer(v).data,
-        "stale": is_stale(v),
-        "estimated_position": {"lat": lat, "lon": lon},
-        "facts": [
-            {**FactSerializer(f).data, "distance_m": d, "eta_s": eta} for f, d, eta in items
-        ],
-    })
+    (lat, lon), items = upcoming_facts(
+        v, _device_id(request), limit=int(request.query_params.get("limit", 5))
+    )
+    return Response(
+        {
+            "vehicle": VehicleSerializer(v).data,
+            "stale": is_stale(v),
+            "estimated_position": {"lat": lat, "lon": lon},
+            "facts": [{**FactSerializer(f).data, "distance_m": d, "eta_s": eta} for f, d, eta in items],
+        }
+    )
 
 
 @api_view(["POST"])

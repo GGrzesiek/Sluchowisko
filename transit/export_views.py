@@ -19,15 +19,21 @@ def snapshot(request):
     if vtype is None:
         return Response({"detail": "type must be tram or bus"}, status=status.HTTP_400_BAD_REQUEST)
     try:
-        rows = build_snapshot(vehicle_type=vtype, line=q.get("line") or None, only=q.get("only"),
-                              radius_m=min(int(q.get("radius", 500)), 2000))
+        rows = build_snapshot(
+            vehicle_type=vtype,
+            line=q.get("line") or None,
+            only=q.get("only"),
+            radius_m=min(int(q.get("radius", 500)), 2000),
+        )
     except WarsawApiError as e:
         return Response({"detail": f"City API unavailable: {e}"}, status=status.HTTP_502_BAD_GATEWAY)
     except ValueError:
         return Response({"detail": "radius must be a number"}, status=status.HTTP_400_BAD_REQUEST)
     resp = Response(rows)
     if q.get("download"):
-        resp["Content-Disposition"] = f'attachment; filename="snapshot_{q.get("line") or q.get("type", "tram")}.json"'
+        resp["Content-Disposition"] = (
+            f'attachment; filename="snapshot_{q.get("line") or q.get("type", "tram")}.json"'
+        )
     return resp
 
 
@@ -35,6 +41,7 @@ def snapshot(request):
 def snapshot_schema(request):
     """Column list, so Kuba knows the keys without reading code."""
     return Response({"columns": COLUMNS})
+
 
 @api_view(["GET"])
 def active_lines(request):
@@ -79,14 +86,24 @@ def active_lines(request):
             "last_update": max(r.time for r in rs).isoformat(timespec="seconds"),
         }
         if q.get("vehicles"):
-            row["vehicles"] = [{"vehicle_number": r.vehicle_number, "brigade": r.brigade, "lat": r.lat,
-                                "lon": r.lon, "time": r.time.isoformat(timespec="seconds")} for r in rs]
+            row["vehicles"] = [
+                {
+                    "vehicle_number": r.vehicle_number,
+                    "brigade": r.brigade,
+                    "lat": r.lat,
+                    "lon": r.lon,
+                    "time": r.time.isoformat(timespec="seconds"),
+                }
+                for r in rs
+            ]
         rows.append(row)
     rows.sort(key=lambda x: (x["type"] != "tram", len(x["line"]), x["line"]))
-    return Response({
-        "fetched_at": now.isoformat(timespec="seconds"),
-        "lines_active": len(rows),
-        "trams": sum(r["vehicles_active"] for r in rows if r["type"] == "tram"),
-        "buses": sum(r["vehicles_active"] for r in rows if r["type"] == "bus"),
-        "lines": rows,
-    })
+    return Response(
+        {
+            "fetched_at": now.isoformat(timespec="seconds"),
+            "lines_active": len(rows),
+            "trams": sum(r["vehicles_active"] for r in rows if r["type"] == "tram"),
+            "buses": sum(r["vehicles_active"] for r in rows if r["type"] == "bus"),
+            "lines": rows,
+        }
+    )

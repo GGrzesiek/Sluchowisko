@@ -1,4 +1,5 @@
 """Check what the LLM returned before it reaches the database. LLMs invent coordinates and links."""
+
 from urllib.parse import urlparse
 
 from transit.llm_context import WARSAW_BBOX, distance_to_route_m
@@ -21,8 +22,11 @@ def validate_places(data, route_stops: list[dict] | None = None, corridor_m: int
     A place is rejected if its location is wrong; individual bad facts are dropped with a warning.
     """
     if not isinstance(data, list):
-        return {"valid": [], "rejected": [{"place": None, "errors": ["Top level must be a JSON array"]}],
-                "warnings": []}
+        return {
+            "valid": [],
+            "rejected": [{"place": None, "errors": ["Top level must be a JSON array"]}],
+            "warnings": [],
+        }
 
     valid, rejected, warnings = [], [], []
     seen_names = set()

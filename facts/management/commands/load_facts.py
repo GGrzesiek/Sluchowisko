@@ -12,8 +12,10 @@ DEFAULT = Path(__file__).resolve().parents[2] / "data" / "sample_facts.json"
 
 
 class Command(BaseCommand):
-    help = ("Load places + facts from JSON (the LLM output). "
-            "With --line, places too far from that line's route are rejected.")
+    help = (
+        "Load places + facts from JSON (the LLM output). "
+        "With --line, places too far from that line's route are rejected."
+    )
 
     def add_arguments(self, parser):
         parser.add_argument("path", nargs="?", default=str(DEFAULT))
@@ -26,7 +28,7 @@ class Command(BaseCommand):
         try:
             data = json.loads(Path(path).read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError) as e:
-            raise CommandError(f"Cannot read {path}: {e}")
+            raise CommandError(f"Cannot read {path}: {e}") from e
 
         stops, corridor = None, 400
         if line:
@@ -51,17 +53,30 @@ class Command(BaseCommand):
         for p in report["valid"]:
             place, _ = Place.objects.update_or_create(
                 name=p["name"],
-                defaults={"lat": p["lat"], "lon": p["lon"], "category": p.get("category", ""),
-                          "image_url": p.get("image_url", "")},
+                defaults={
+                    "lat": p["lat"],
+                    "lon": p["lon"],
+                    "category": p.get("category", ""),
+                    "image_url": p.get("image_url", ""),
+                },
             )
             for f in p["facts"]:
                 Fact.objects.update_or_create(
-                    place=place, title=f["title"].strip(),
-                    defaults={"text": f["text"].strip(), "source_url": f["source_url"],
-                              "language": f.get("language", "pl"), "priority": f["priority"],
-                              "generated_by": generated_by, "approved": approve},
+                    place=place,
+                    title=f["title"].strip(),
+                    defaults={
+                        "text": f["text"].strip(),
+                        "source_url": f["source_url"],
+                        "language": f.get("language", "pl"),
+                        "priority": f["priority"],
+                        "generated_by": generated_by,
+                        "approved": approve,
+                    },
                 )
                 n += 1
         if verbose:
-            self.stdout.write(self.style.SUCCESS(
-                f"Loaded {len(report['valid'])} places, {n} facts ({len(report['rejected'])} places rejected)"))
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f"Loaded {len(report['valid'])} places, {n} facts ({len(report['rejected'])} places rejected)"
+                )
+            )
