@@ -24,6 +24,17 @@ resource "google_storage_bucket" "audio" {
   }
 }
 
+resource "google_storage_bucket" "data" {
+  name                        = "${var.project_id}-data"
+  location                    = var.region
+  uniform_bucket_level_access = true
+  public_access_prevention    = "enforced"
+
+  versioning {
+    enabled = true
+  }
+}
+
 resource "google_sql_database_instance" "main" {
   name                = "muzeum"
   database_version    = "POSTGRES_16"
@@ -91,6 +102,12 @@ resource "google_storage_bucket_iam_member" "team_group" {
   member = "group:${var.team_group}"
 }
 
+resource "google_storage_bucket_iam_member" "data_team_group" {
+  bucket = google_storage_bucket.data.name
+  role   = "roles/storage.objectViewer"
+  member = "group:${var.team_group}"
+}
+
 resource "google_project_iam_member" "members" {
   for_each = local.member_role_pairs
   project  = var.project_id
@@ -101,6 +118,13 @@ resource "google_project_iam_member" "members" {
 resource "google_storage_bucket_iam_member" "audio" {
   for_each = toset(var.members)
   bucket   = google_storage_bucket.audio.name
+  role     = "roles/storage.objectAdmin"
+  member   = "user:${each.value}"
+}
+
+resource "google_storage_bucket_iam_member" "data" {
+  for_each = toset(var.members)
+  bucket   = google_storage_bucket.data.name
   role     = "roles/storage.objectAdmin"
   member   = "user:${each.value}"
 }
