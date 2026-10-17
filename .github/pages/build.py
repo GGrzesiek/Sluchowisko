@@ -4,7 +4,7 @@ import os
 import shutil
 import subprocess
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 BRANCHES = [("release", ""), ("development", "dev")]
 BASE_PATH = os.environ.get("PAGES_BASE_PATH", "").rstrip("/")
@@ -36,16 +36,22 @@ def placeholder(branch, slug, out_dir):
 
 
 def write_version(branch, slug, out_dir):
-    commit, subject, date = subprocess.run(
-        ["git", "log", "-1", "--format=%H%x00%s%x00%cI", f"origin/{branch}"],
-        check=True, capture_output=True, text=True,
-    ).stdout.strip().split("\0")
+    commit, subject, date = (
+        subprocess.run(
+            ["git", "log", "-1", "--format=%H%x00%s%x00%cI", f"origin/{branch}"],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        .stdout.strip()
+        .split("\0")
+    )
     version = {
         "branch": branch,
         "commit": commit,
         "subject": subject,
         "committed_at": date,
-        "built_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "built_at": datetime.now(UTC).isoformat(timespec="seconds"),
         "run_id": os.environ.get("GITHUB_RUN_ID", ""),
     }
     with open(os.path.join(out_dir, slug, "version.json"), "w", encoding="utf-8") as f:
