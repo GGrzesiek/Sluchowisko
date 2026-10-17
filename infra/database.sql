@@ -7,3 +7,5 @@ END
 $$;
 
 GRANT ALL ON SCHEMA public TO team;
+
+GRANT team TO :"team_group";

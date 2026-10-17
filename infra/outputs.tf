@@ -9,3 +9,7 @@ output "cloudsql_instance" {
 output "database" {
   value = google_sql_database.main.name
 }
+
+output "team_group" {
+  value = google_sql_user.team_group.name
+}
