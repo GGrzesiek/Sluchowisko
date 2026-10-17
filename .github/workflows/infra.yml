@@ -93,4 +93,4 @@ jobs:
           {
             cat database.sql
             jq -r '.[] | "GRANT team TO \"" + . + "\";"' <<< "$TF_VAR_members"
-          } | psql -v ON_ERROR_STOP=1 -v team_group="$(terraform output -raw team_group)"
+          } | psql -v ON_ERROR_STOP=1 -v team_group="$(terraform output -raw team_group)" -v api_user="$(terraform output -raw api_db_user)"

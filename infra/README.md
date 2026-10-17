@@ -9,6 +9,7 @@ The app never talks to GCP. It still reads only static files (see `AGENTS.md`).
 | PostgreSQL 16 (Cloud SQL) | instance `muzeum`, database `muzeum`, IAM login only       |
 | ElevenLabs recordings     | bucket `muzeum-w-autobusie-2026-audio`, private, versioned |
 | Terraform state           | bucket `muzeum-w-autobusie-2026-tfstate`                   |
+| Backend (Django)          | Cloud Run service `backend`, public HTTPS                  |
 | Owner and billing         | Grzesiek (#5)                                              |
 
 There are no passwords or key files anywhere. People sign in with their Google account, GitHub Actions with
@@ -24,6 +25,23 @@ Workload Identity Federation.
 - Pull request touching `infra/**`: CI runs `terraform plan` as `tf-plan` (read-only) and shows it in the job summary.
 - Merge into `development`: CD runs `terraform apply` as `tf-apply`, then `database.sql` and the writer grants.
   Only pushes to `development` can act as `tf-apply`, and `development` accepts reviewed PRs only.
+
+## Backend on Cloud Run
+
+`infra/backend.tf`: Cloud Run service `backend` running the Django image with a `cloud-sql-proxy` sidecar, so the app
+logs in to Postgres as the service account `backend-api` (role `team`) without a password. The image lives in
+Artifact Registry `backend`; `.github/workflows/backend.yml` builds and deploys it on every push to `development` that
+touches the backend, then checks `/api/health/`. Terraform creates the service with a placeholder image and ignores
+later image changes.
+
+Secrets are created by the owner, never in Terraform or in the repo:
+
+```bash
+printf %s "$ZTM_API_KEY" | gcloud secrets create ztm-api-key --data-file=-
+python3 -c "import secrets; print(secrets.token_urlsafe(50), end='')" | gcloud secrets create django-secret-key --data-file=-
+```
+
+Database migrations are run by hand from a laptop (see Connecting), not by the deploy.
 
 ## Who can do what
 
