@@ -134,6 +134,14 @@ MAILERS = {
     },
 }
 
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {"console": {"class": "logging.StreamHandler"}},
+    "root": {"handlers": ["console"], "level": "INFO"},
+    "loggers": {"django": {"handlers": ["console"], "level": "INFO", "propagate": False}},
+}
+
 # --- Warsaw open data, new portal (dane.um.warszawa.pl) ---
 # POST + JSON body, token in the "Authorization" header (no prefix)
 WARSAW_API_KEY = (os.getenv("ZTM_API_KEY") or os.getenv("WARSAW_API_KEY", "")).strip()
