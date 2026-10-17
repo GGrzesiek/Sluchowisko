@@ -10,6 +10,21 @@ TEMPLATES = {
     "wikidata.born": "{label} – data urodzenia: {born}.",
     "wikidata.died": "{label} – data śmierci: {died}.",
     "wikidata.sitelinks": "{label} – liczba artykułów w Wikipedii w różnych językach: {sitelinks}.",
+    "city.flat_prices": (
+        "Mediana ceny 1 m² lokalu mieszkalnego w transakcjach rynkowych z {year} r. w promieniu 400 m od przystanku "
+        "{name} wyniosła {price} zł (liczba lokali: {count})."
+    ),
+    "city.budget": (
+        "W budżecie obywatelskim na rok {year} zrealizowano projekt „{title}”, {distance} m od przystanku {name}; "
+        "koszt: {cost} zł."
+    ),
+    "city.budget_no_cost": (
+        "W budżecie obywatelskim na rok {year} zrealizowano projekt „{title}”, {distance} m od przystanku {name}."
+    ),
+    "city.tree": (
+        "W rejestrze drzew m.st. Warszawy, {distance} m od przystanku {name}: {species} ({latin}), obwód pnia "
+        "{girth} cm, wysokość {height} m, dane z {year} r."
+    ),
 }
 
 
@@ -26,6 +41,9 @@ class Book:
 
     def source_id(self, url: str) -> str | None:
         return self._by_url.get(url)
+
+    def fragment_ids(self, source_id: str) -> list[str]:
+        return [f"{source_id}#{number}" for number in range(1, self._fragment_count.get(source_id, 0) + 1)]
 
     def add_source(
         self,

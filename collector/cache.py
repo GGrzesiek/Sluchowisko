@@ -1,6 +1,8 @@
 import hashlib
 import json
 import time
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
@@ -16,15 +18,27 @@ load_dotenv(REPO_ROOT / ".env")
 USER_AGENT = "MuzeumWAutobusie/0.1 (https://github.com/GGrzesiek/opendatahackathon42)"
 CACHE_DIR = REPO_ROOT / "cache"
 MIN_INTERVAL_S = 1.0
+HOST_INTERVALS_S = {"www.warszawa1939.pl": 10.0}
 RETRY_STATUSES = {429, 502, 503, 504}
 RETRY_WAITS_S = (10, 30, 90)
 TIMEOUT_S = 120
 
 _last_request_at: dict[str, float] = {}
+_offline = False
 
 
 class FetchError(RuntimeError):
     pass
+
+
+@contextmanager
+def offline() -> Iterator[None]:
+    global _offline
+    previous, _offline = _offline, True
+    try:
+        yield
+    finally:
+        _offline = previous
 
 
 @dataclass(frozen=True)
@@ -73,9 +87,13 @@ def fetch(
     if stored:
         return stored
 
+    if _offline:
+        raise FetchError(f"{method} {url}: not in the cache")
     request = describe(method, url, params, form, json_body)
     path = cache_path(request)
-    body = _download(request, headers or {})
+    response = _download(request, headers or {})
+    charset_given = "charset" in response.headers.get("Content-Type", "").lower()
+    body = response.content.decode(response.encoding if charset_given else "utf-8")
     retrieved_at = date.today()
     stored = {**request, "retrieved_at": retrieved_at.isoformat(), "body": body}
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -85,7 +103,24 @@ def fetch(
     return Cached(body, retrieved_at)
 
 
-def _download(request: dict, headers: dict) -> str:
+def fetch_image(url: str, *, params: dict | None = None) -> bytes:
+    path = cache_path(describe("GET", url, params, None, None)).with_suffix(".bin")
+    if path.exists():
+        return path.read_bytes()
+    if _offline:
+        raise FetchError(f"GET {url}: not in the cache")
+    response = _download(describe("GET", url, params, None, None), {})
+    content_type = response.headers.get("Content-Type", "")
+    if not content_type.startswith("image/"):
+        raise FetchError(f"GET {url}: expected an image, got {content_type} {response.content[:200]!r}")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    partial = path.with_suffix(".part")
+    partial.write_bytes(response.content)
+    partial.replace(path)
+    return response.content
+
+
+def _download(request: dict, headers: dict) -> requests.Response:
     method, url = request["method"], request["url"]
     host = urlsplit(url).hostname
     for attempt, wait in enumerate((0, *RETRY_WAITS_S)):
@@ -109,13 +144,13 @@ def _download(request: dict, headers: dict) -> str:
             continue
         if not response.ok:
             raise FetchError(f"{method} {url}: HTTP {response.status_code} {response.text[:200]}")
-        charset_given = "charset" in response.headers.get("Content-Type", "").lower()
-        return response.content.decode(response.encoding if charset_given else "utf-8")
+        return response
     raise FetchError(f"{method} {url}: no response")
 
 
 def _respect_interval(host: str) -> None:
+    interval = HOST_INTERVALS_S.get(host, MIN_INTERVAL_S) if MIN_INTERVAL_S else 0
     elapsed = time.monotonic() - _last_request_at.get(host, float("-inf"))
-    if elapsed < MIN_INTERVAL_S:
-        time.sleep(MIN_INTERVAL_S - elapsed)
+    if elapsed < interval:
+        time.sleep(interval - elapsed)
     _last_request_at[host] = time.monotonic()
