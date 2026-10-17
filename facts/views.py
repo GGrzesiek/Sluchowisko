@@ -77,7 +77,8 @@ def ride_stops(request, vehicle_number):
     try:
         found = refresh_vehicle(vehicle_number)
     except WarsawApiError:
-        found = Vehicle.objects.filter(number=vehicle_number).exists()
+        known = Vehicle.objects.filter(number=vehicle_number).first()
+        found = known is not None and not is_stale(known)
         if not found:
             return Response({"code": "city_api"}, status=status.HTTP_502_BAD_GATEWAY)
     if not found:

@@ -1,6 +1,7 @@
 from datetime import timedelta
 from unittest.mock import MagicMock, patch
 
+import requests
 from django.core.cache import cache
 from django.core.management import call_command
 from django.test import TestCase, override_settings
@@ -90,7 +91,7 @@ class LiveRideStopsTest(TestCase):
         self.client = APIClient()
 
     def feed(self, *readings):
-        return lambda vehicle_type=2, line=None: [r for r in readings if (r.line == "999") == (vehicle_type == 1)]
+        return lambda vehicle_type=2, line=None, **_: [r for r in readings if (r.line == "999") == (vehicle_type == 1)]
 
     @patch("transit.services.fetch_vehicle_positions")
     def test_returns_ride_info_and_caches_city_feed(self, fetch):
@@ -125,3 +126,42 @@ class LiveRideStopsTest(TestCase):
         fetch.side_effect = self.feed(live("3122", "22", 52.2461, 20.9860))
         r = self.client.get("/api/health/")
         self.assertEqual((r.status_code, r.json()), (200, {"db": True, "city_api": True}))
+
+    @patch("transit.services.fetch_vehicle_positions")
+    def test_falls_back_to_recent_position_when_city_api_fails(self, fetch):
+        ingest_readings([live("3122", "22", 52.2461, 20.9860, seconds_ago=20)])
+        fetch.side_effect = WarsawApiError("down")
+        r = self.client.get("/api/ride/3122/stops/")
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json()["vehicle"], "3122")
+
+    @patch("transit.services.fetch_vehicle_positions")
+    def test_stale_position_is_not_served_when_city_api_fails(self, fetch):
+        ingest_readings([live("3122", "22", 52.2461, 20.9860, seconds_ago=3600)])
+        fetch.side_effect = WarsawApiError("down")
+        r = self.client.get("/api/ride/3122/stops/")
+        self.assertEqual((r.status_code, r.json()["code"]), (502, "city_api"))
+
+    @patch("transit.services.fetch_vehicle_positions", side_effect=WarsawApiError("down"))
+    def test_failure_is_cached_so_city_api_is_not_hammered(self, fetch):
+        self.client.get("/api/ride/3122/stops/")
+        self.client.get("/api/ride/3122/stops/")
+        self.assertEqual(fetch.call_count, 1)
+
+    @patch("transit.services.fetch_vehicle_positions", side_effect=WarsawApiError("down"))
+    def test_health_reports_city_api_down(self, fetch):
+        r = self.client.get("/api/health/")
+        self.assertEqual((r.status_code, r.json()), (503, {"db": True, "city_api": False}))
+
+
+class FetchAttemptsTest(TestCase):
+    @override_settings(WARSAW_API_KEY="x")
+    @patch("transit.warsaw_api.time.sleep")
+    @patch("transit.warsaw_api.requests.post")
+    def test_single_attempt_does_not_retry_or_sleep(self, post, sleep):
+        post.side_effect = requests.ConnectionError("boom")
+        with self.assertRaises(WarsawApiError):
+            fetch_vehicle_positions(vehicle_type=2, timeout=5, attempts=1)
+        self.assertEqual(post.call_count, 1)
+        sleep.assert_not_called()
+        self.assertEqual(post.call_args.kwargs["timeout"], 5)
