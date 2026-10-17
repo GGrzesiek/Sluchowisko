@@ -87,7 +87,7 @@ resource "google_project_iam_member" "team_group" {
 
 resource "google_storage_bucket_iam_member" "team_group" {
   bucket = google_storage_bucket.audio.name
-  role   = "roles/storage.objectAdmin"
+  role   = "roles/storage.objectViewer"
   member = "group:${var.team_group}"
 }
 
