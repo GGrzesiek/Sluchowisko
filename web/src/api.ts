@@ -2,9 +2,9 @@ export type RideProblem = "vehicleNotFound" | "noRoute" | "noLiveData" | "unavai
 
 export const API_URL: string = (import.meta.env.VITE_API_URL ?? "").replace(/\/+$/, "");
 
-export function rideSocketUrl(vehicle: string, deviceId: string): string {
+export function rideSocketUrl(vehicle: string): string {
   const base = API_URL
     ? API_URL.replace(/^http/, "ws")
     : `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}`;
-  return `${base}/ws/ride/${encodeURIComponent(vehicle)}/?device_id=${encodeURIComponent(deviceId)}`;
+  return `${base}/ws/ride/${encodeURIComponent(vehicle)}/`;
 }

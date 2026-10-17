@@ -1,40 +1,28 @@
 import asyncio
 import json
 import logging
-from urllib.parse import parse_qs
 
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
 from django.conf import settings
 
 from stories.models import Story
-from stories.serializers import audio_info
+from stories.serializers import audio_info, story_location
 from transit.models import Vehicle
 from transit.services import refresh_vehicle
 from transit.warsaw_api import WarsawApiError
 
-from .models import Fact, SeenFact
 from .ride_progress import NoRouteError, build_ride_info
-from .serializers import FactSerializer
-from .services import is_stale, upcoming_facts
+from .services import is_stale
 
 logger = logging.getLogger(__name__)
 
 CLOSE_UNKNOWN_VEHICLE = 4404
 
 
-def _location_payload(vehicle, device_id, sent_fact_ids):
-    (lat, lon), items = upcoming_facts(vehicle, device_id)
-    facts = []
-    for fact, distance_m, eta_s in items:
-        if fact.id in sent_fact_ids:
-            continue
-        data = FactSerializer(fact).data
-        image_url = data["place"].pop("image_url")
-        facts.append(
-            {**data, "images": [{"url": image_url}] if image_url else [], "distance_m": distance_m, "eta_s": eta_s}
-        )
-    return {"estimated_position": {"lat": lat, "lon": lon}, "stale": is_stale(vehicle), "facts": facts}
+def _current_group_id(route):
+    current = next((stop for stop in route["stops"] if stop["state"] == "current"), None)
+    return current.get("groupId") if current else None
 
 
 def _upcoming_group(route):
@@ -49,7 +37,12 @@ def _audio_message(group_id, name):
     return {**base, "available": True, **audio} if audio else {**base, "available": False}
 
 
-def _collect(vehicle_number, device_id, sent_fact_ids):
+def _location_payload(group_id):
+    story = Story.objects.filter(group_id=group_id, status=Story.Status.VERIFIED).first()
+    return {"groupId": group_id, "story": story_location(story) if story else None}
+
+
+def _collect(vehicle_number):
     city_api_failed = False
     if settings.CITY_API_LIVE:
         try:
@@ -68,26 +61,19 @@ def _collect(vehicle_number, device_id, sent_fact_ids):
     except NoRouteError:
         result["errors"].append("no_route")
         result["line"] = vehicle.line
-    result["location"] = _location_payload(vehicle, device_id, sent_fact_ids)
+        return result
+    group_id = _current_group_id(result["route"])
+    if group_id:
+        result["location"] = _location_payload(group_id)
     return result
-
-
-def _mark_seen(device_id, fact_id, vehicle_number):
-    fact = Fact.objects.filter(id=fact_id).first()
-    if fact is None:
-        return False
-    SeenFact.objects.get_or_create(device_id=device_id, fact=fact, defaults={"vehicle_number": vehicle_number})
-    return True
 
 
 class RideConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         self.vehicle_number = self.scope["url_route"]["kwargs"]["vehicle_number"]
-        query = parse_qs(self.scope.get("query_string", b"").decode(errors="replace"))
-        self.device_id = (query.get("device_id") or [None])[0]
-        self.sent_fact_ids = set()
         self.sent_audio_groups = set()
         self.last_route = None
+        self.last_group_id = None
         self.last_errors = set()
         self.push_task = None
         await self.accept()
@@ -109,27 +95,15 @@ class RideConsumer(AsyncWebsocketConsumer):
             return
         try:
             message = json.loads(text_data)
-            kind = message.get("type") if isinstance(message, dict) else None
-            if kind == "ping":
+            if isinstance(message, dict) and message.get("type") == "ping":
                 await self._send("pong", {})
-            elif kind == "seen":
-                await self._handle_seen(message)
             else:
-                await self._send("error", {"code": "unknown_message", "detail": "expected type ping or seen"})
+                await self._send("error", {"code": "unknown_message", "detail": "expected type ping"})
         except json.JSONDecodeError:
             await self._send("error", {"code": "invalid_json", "detail": "message must be JSON"})
         except Exception:
             logger.exception("failed to handle client message")
             await self._send("error", {"code": "internal", "detail": "could not handle message"})
-
-    async def _handle_seen(self, message):
-        fact_id = message.get("fact_id")
-        if not self.device_id:
-            await self._send("error", {"code": "device_id_required", "detail": "connect with ?device_id="})
-        elif not isinstance(fact_id, int) or isinstance(fact_id, bool):
-            await self._send("error", {"code": "invalid_fact_id", "detail": "fact_id must be an integer"})
-        elif not await database_sync_to_async(_mark_seen)(self.device_id, fact_id, self.vehicle_number):
-            await self._send("error", {"code": "unknown_fact", "detail": f"no fact {fact_id}"})
 
     async def _send(self, kind, data):
         try:
@@ -151,9 +125,7 @@ class RideConsumer(AsyncWebsocketConsumer):
             await asyncio.sleep(settings.WS_PUSH_INTERVAL_SECONDS)
 
     async def _push_once(self):
-        result = await database_sync_to_async(_collect, thread_sensitive=False)(
-            self.vehicle_number, self.device_id, self.sent_fact_ids
-        )
+        result = await database_sync_to_async(_collect, thread_sensitive=False)(self.vehicle_number)
         for code in result["errors"]:
             if code not in self.last_errors:
                 detail = {"code": code}
@@ -171,7 +143,7 @@ class RideConsumer(AsyncWebsocketConsumer):
             self.sent_audio_groups.add(upcoming[0])
             await self._send("audio", await database_sync_to_async(_audio_message)(*upcoming))
         location = result.get("location")
-        if location and location["facts"]:
+        if location and location["groupId"] != self.last_group_id:
+            self.last_group_id = location["groupId"]
             await self._send("location", location)
-            self.sent_fact_ids.update(f["id"] for f in location["facts"])
         return True

@@ -79,6 +79,7 @@ def _route_memory_key(v: Vehicle) -> str:
 
 def pick_route(v: Vehicle, lat: float, lon: float):
     fits = [f for f in (_fit(v, lat, lon, r) for r in Route.objects.filter(line_id=v.line)) if f]
+    fits = [f for f in fits if not f[2].is_depot] or fits
     if not fits:
         raise NoRouteError(f"No route built for line {v.line}. Run: python manage.py build_routes --line {v.line}")
     key = _route_memory_key(v)

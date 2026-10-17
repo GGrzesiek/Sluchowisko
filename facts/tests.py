@@ -13,6 +13,7 @@ from django.utils import timezone
 from rest_framework.test import APIClient
 
 from config.asgi import application
+from stories.models import Story
 from transit.models import Line, Route, RouteStop, Stop, Vehicle
 from transit.services import ingest_readings
 from transit.warsaw_api import VehicleReading, WarsawApiError, fetch_vehicle_positions
@@ -31,10 +32,33 @@ class RideSocketTestCase(TransactionTestCase):
         return await communicator.receive_json_from(timeout=5)
 
 
+def story(group_id, **extra):
+    return Story.objects.create(
+        group_id=group_id,
+        title=f"Historia {group_id}",
+        narration="Narracja.",
+        text="Tekst do przeczytania.",
+        photos=[
+            {
+                "src": "https://upload.wikimedia.org/a.jpg",
+                "alt": "Hala",
+                "year": "1936",
+                "caption": "Hala Mirowska",
+                "author": "Jan Kowalski",
+                "license": "domena publiczna",
+                "source_url": "https://commons.wikimedia.org/wiki/File:A.jpg",
+            }
+        ],
+        blocks=[{"type": "paragraph", "text": "Tekst do przeczytania."}],
+        sources=[{"label": "Wikipedia", "href": "https://pl.wikipedia.org/wiki/Hale_Mirowskie"}],
+        status=extra.pop("status", Story.Status.VERIFIED),
+        **extra,
+    )
+
+
 @override_settings(CITY_API_LIVE=False, WS_PUSH_INTERVAL_SECONDS=3600)
 class RideFlowTest(RideSocketTestCase):
     def setUp(self):
-        call_command("load_facts", "--approve", verbosity=0)
         ingest_readings([reading(52.2355, 21.0080, 12)])
         ingest_readings([reading(52.2345, 21.0078, 2)])
 
@@ -42,34 +66,6 @@ class RideFlowTest(RideSocketTestCase):
         v = Vehicle.objects.get(number="3201")
         self.assertTrue(150 < v.heading < 210)
         self.assertGreater(v.speed_mps, 5)
-
-    async def test_pushes_location_with_text_and_images_and_hides_seen(self):
-        c = self.connect("3201", "?device_id=dev-1")
-        await c.connect()
-        msg = await self.receive(c)
-        if msg["type"] == "error":
-            msg = await self.receive(c)
-        titles = [f["title"] for f in msg["data"]["facts"]]
-        self.assertIn("Prezent, o który nikt nie prosił", titles)
-        fact = msg["data"]["facts"][0]
-        self.assertIn("text", fact)
-        self.assertIsInstance(fact["images"], list)
-        await c.send_json_to({"type": "seen", "fact_id": fact["id"]})
-        await c.disconnect()
-
-        c2 = self.connect("3201", "?device_id=dev-1")
-        await c2.connect()
-        self.assertEqual((await self.receive(c2))["data"], {"code": "no_route", "line": "17"})
-        self.assertTrue(await c2.receive_nothing(timeout=1))
-        await c2.disconnect()
-
-    async def test_place_behind_is_skipped(self):
-        await database_sync_to_async(Vehicle.objects.filter(number="3201").update)(heading=0)
-        c = self.connect("3201")
-        await c.connect()
-        self.assertEqual((await self.receive(c))["data"], {"code": "no_route", "line": "17"})
-        self.assertTrue(await c.receive_nothing(timeout=1))
-        await c.disconnect()
 
     async def test_unknown_vehicle_closes_with_error(self):
         c = self.connect("nope")
@@ -92,7 +88,7 @@ class RideFlowTest(RideSocketTestCase):
                 break
             if m["type"] == "error":
                 codes.append(m["data"]["code"])
-        self.assertEqual([c for c in codes if c != "no_route"], ["invalid_json", "device_id_required"])
+        self.assertEqual([c for c in codes if c != "no_route"], ["invalid_json", "unknown_message"])
         await c.disconnect()
 
     async def test_disconnect_stops_push_loop(self):
@@ -111,6 +107,106 @@ class RideFlowTest(RideSocketTestCase):
         self.assertEqual((await self.receive(c))["data"], {"code": "internal"})
         await asyncio.sleep(0.2)
         self.assertGreaterEqual(collect.call_count, 2)
+        await c.disconnect()
+
+
+@override_settings(CITY_API_LIVE=False, WS_PUSH_INTERVAL_SECONDS=0.05)
+class StoryLocationTest(RideSocketTestCase):
+    def setUp(self):
+        line = Line.objects.create(number="22", kind=Line.TRAM)
+        route = Route.objects.create(line=line, code="TP-WIA", last_stop_name="Wiatraczna", stop_count=3)
+        for order, (name, lat) in enumerate([("Powązkowska", 52.2480), ("Niska", 52.2460), ("Okopowa", 52.2440)], 1):
+            stop = Stop.objects.create(zespol=str(5000 + order), slupek="01", name=name, lat=lat, lon=20.9860)
+            RouteStop.objects.create(route=route, order=order, zespol=stop.zespol, slupek="01", stop=stop)
+        self.set_position(52.2461)
+
+    def set_position(self, lat):
+        ingest_readings([live("3122", "22", lat + 0.0003, 20.9860, seconds_ago=10)])
+        ingest_readings([live("3122", "22", lat, 20.9860, seconds_ago=1)])
+
+    async def messages(self, communicator, count):
+        received = []
+        while len(received) < count:
+            message = await self.receive(communicator)
+            if message["type"] != "audio":
+                received.append(message)
+        return received
+
+    async def test_sends_route_then_story_of_the_current_stop_group(self):
+        await database_sync_to_async(story)("5002")
+        c = self.connect("3122")
+        await c.connect()
+        route, location = await self.messages(c, 2)
+        self.assertEqual(route["type"], "route")
+        self.assertEqual(location["type"], "location")
+        self.assertEqual(location["data"]["groupId"], "5002")
+        content = location["data"]["story"]
+        self.assertEqual(content["title"], "Historia 5002")
+        self.assertEqual(content["body"], {"format": "plain", "text": "Tekst do przeczytania."})
+        self.assertEqual(content["photos"][0]["credit"], "Fot. Jan Kowalski · domena publiczna")
+        self.assertNotIn("narration", content)
+        self.assertEqual(content["blocks"], [{"type": "paragraph", "text": "Tekst do przeczytania."}])
+        self.assertEqual(content["sources"][0]["label"], "Wikipedia")
+        await c.disconnect()
+
+    async def test_story_is_sent_once_per_stop_group(self):
+        await database_sync_to_async(story)("5002")
+        c = self.connect("3122")
+        await c.connect()
+        await self.messages(c, 2)
+        self.assertTrue(await c.receive_nothing(timeout=0.5))
+        await c.disconnect()
+
+    async def test_stop_group_without_story_gets_an_empty_location(self):
+        c = self.connect("3122")
+        await c.connect()
+        _, location = await self.messages(c, 2)
+        self.assertEqual(location["data"], {"groupId": "5002", "story": None})
+        await c.disconnect()
+
+    async def test_draft_and_rejected_stories_are_not_sent(self):
+        await database_sync_to_async(story)("5002", status=Story.Status.DRAFT)
+        c = self.connect("3122")
+        await c.connect()
+        _, location = await self.messages(c, 2)
+        self.assertIsNone(location["data"]["story"])
+        await c.disconnect()
+
+    async def test_both_poles_of_a_stop_group_return_the_same_story(self):
+        def add_opposite_direction():
+            line = Line.objects.get(number="22")
+            back = Route.objects.create(line=line, code="TP-POW", last_stop_name="Powązkowska", stop_count=2)
+            for order, (slupek, lat) in enumerate([("06", 52.2441), ("07", 52.2461)], 1):
+                zespol = "5003" if slupek == "06" else "5002"
+                stop = Stop.objects.create(zespol=zespol, slupek=slupek, name="Okopowa", lat=lat, lon=20.9861)
+                RouteStop.objects.create(route=back, order=order, zespol=zespol, slupek=slupek, stop=stop)
+            story("5003")
+            self.set_position(52.2441)
+            ingest_readings([live("4001", "22", 52.2444, 20.9861, seconds_ago=10)])
+            ingest_readings([live("4001", "22", 52.2441, 20.9861, seconds_ago=1)])
+
+        await database_sync_to_async(add_opposite_direction)()
+        results = []
+        for number in ("3122", "4001"):
+            c = self.connect(number)
+            await c.connect()
+            messages = await self.messages(c, 2)
+            results.append(messages[1]["data"])
+            await c.disconnect()
+        self.assertEqual(results[0]["groupId"], results[1]["groupId"])
+        self.assertIsNotNone(results[1]["story"])
+
+    async def test_new_story_is_sent_when_the_vehicle_reaches_the_next_stop_group(self):
+        await database_sync_to_async(story)("5002")
+        await database_sync_to_async(story)("5003")
+        c = self.connect("3122")
+        await c.connect()
+        await self.messages(c, 2)
+        await database_sync_to_async(self.set_position)(52.2440)
+        route, location = await self.messages(c, 2)
+        self.assertEqual(route["type"], "route")
+        self.assertEqual(location["data"]["groupId"], "5003")
+        self.assertEqual(location["data"]["story"]["title"], "Historia 5003")
         await c.disconnect()
 
 
@@ -225,6 +321,32 @@ class RideStopsRestTest(TestCase):
     def test_returns_ride_info(self, fetch):
         r = APIClient().get("/api/ride/3122/stops/")
         self.assertEqual((r.status_code, r.json()["line"], r.json()["destination"]), (200, "22", "Wiatraczna"))
+
+
+class DepotRouteTest(TestCase):
+    def setUp(self):
+        cache.clear()
+        line = Line.objects.create(number="161", kind=Line.BUS)
+        stops = [
+            Stop.objects.create(zespol=str(7000 + i), slupek="01", name=f"P{i}", lat=52.2 - i * 0.002, lon=21.2)
+            for i in range(3)
+        ]
+        for code, last in (("TD-DEPOT", "Zajezdnia"), ("TO-REAL", "Pasażerska")):
+            route = Route.objects.create(line=line, code=code, last_stop_name=last, stop_count=3)
+            for order, stop in enumerate(stops, 1):
+                RouteStop.objects.create(route=route, order=order, zespol=stop.zespol, slupek="01", stop=stop)
+        ingest_readings([live("1012", "161", 52.2, 21.2, seconds_ago=20)])
+
+    @override_settings(CITY_API_LIVE=False)
+    def test_depot_route_is_not_picked_when_a_passenger_route_exists(self):
+        r = APIClient().get("/api/ride/1012/stops/")
+        self.assertEqual((r.status_code, r.json()["destination"]), (200, "Pasażerska"))
+
+    @override_settings(CITY_API_LIVE=False)
+    def test_depot_route_is_used_when_it_is_the_only_one(self):
+        Route.objects.filter(code="TO-REAL").delete()
+        r = APIClient().get("/api/ride/1012/stops/")
+        self.assertEqual(r.json()["destination"], "Zajezdnia")
 
 
 class LiveHealthTest(TestCase):
@@ -414,6 +536,7 @@ class RideAudioTest(RideSocketTestCase):
                 "aiVoice": True,
             },
         )
+        self.assertEqual((await self.receive(c))["type"], "location")
         self.assertTrue(await c.receive_nothing(timeout=0.3))
         await c.disconnect()
 
@@ -430,6 +553,7 @@ class RideAudioTest(RideSocketTestCase):
         await c.connect()
         audio = await self.audio_message(c)
         self.assertEqual(audio, {"groupId": "5002", "name": "Niska", "available": False})
+        self.assertEqual((await self.receive(c))["type"], "location")
         self.assertTrue(await c.receive_nothing(timeout=0.3))
         await c.send_json_to({"type": "ping"})
         self.assertEqual((await self.receive(c))["type"], "pong")

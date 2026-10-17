@@ -83,4 +83,16 @@ describe("components", () => {
     const hidden = screen.getAllByText(/^Stop \d+$/).filter((e) => e.closest('[aria-hidden="true"]'));
     expect(hidden.map((e) => e.textContent)).toEqual(["Stop 16", "Stop 23"]);
   });
+
+  it("shows the headphones icon only at the current stop", () => {
+    const stops = [
+      { name: "A", state: "passed" as const, hasStory: true },
+      { name: "B", state: "current" as const, hasStory: true },
+      { name: "C", state: "next" as const, etaMinutes: 2, hasStory: true },
+      { name: "D", state: "upcoming" as const, etaMinutes: 4, hasStory: true },
+    ];
+    const { container } = render(<RouteStrip stops={stops} />);
+    expect(container.querySelectorAll('[data-story-icon="shown"]')).toHaveLength(1);
+    expect(container.querySelectorAll('[data-story-icon="hidden"]')).toHaveLength(3);
+  });
 });

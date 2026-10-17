@@ -8,7 +8,7 @@ import { openRideSocket } from "./rideSocket";
 import { FindingVehicleScreen } from "./screens/FindingVehicleScreen";
 import { JourneyScreen } from "./screens/JourneyScreen";
 import { VehicleFoundScreen } from "./screens/VehicleFoundScreen";
-import type { RideInfo } from "./types";
+import type { RideInfo, StoryContent } from "./types";
 
 export type DeadEnd = Extract<RideProblem, "vehicleNotFound" | "noRoute">;
 
@@ -59,8 +59,9 @@ export function FindVehicle({ ride, onFound, onDeadEnd, onCancel }: FindVehicleP
   return <FindingVehicleScreen ride={ride} onCancel={onCancel} />;
 }
 
-export function useLiveRide(initial: RideInfo): RideInfo {
+export function useLiveRide(initial: RideInfo): { info: RideInfo; story: StoryContent | null } {
   const [info, setInfo] = useState(initial);
+  const [story, setStory] = useState<StoryContent | null>(null);
   const { report, resolve } = useAppErrors();
   const vehicle = initial.vehicle;
   const line = initial.line;
@@ -73,6 +74,7 @@ export function useLiveRide(initial: RideInfo): RideInfo {
         resolve("positionLost");
         resolve("dataUnavailable");
       },
+      onLocation: (location) => setStory(location.story),
       onProblem: lost,
       onDisconnect: lost,
     });
@@ -82,11 +84,11 @@ export function useLiveRide(initial: RideInfo): RideInfo {
     };
   }, [vehicle, line, report, resolve]);
 
-  return info;
+  return { info, story };
 }
 
 export function LiveVehicleFound({ info, onStart }: { info: RideInfo; onStart: (latest: RideInfo) => void }) {
-  const live = useLiveRide(info);
+  const { info: live } = useLiveRide(info);
   const narration = useNarration();
   const start = () => {
     narration.start(PLACEHOLDER_STORY);
@@ -96,11 +98,11 @@ export function LiveVehicleFound({ info, onStart }: { info: RideInfo; onStart: (
 }
 
 export function LiveJourney({ info, onClose }: { info: RideInfo; onClose: () => void }) {
-  const live = useLiveRide(info);
+  const { info: live, story } = useLiveRide(info);
   const narration = useNarration();
   const close = () => {
     narration.stop();
     onClose();
   };
-  return <JourneyScreen ride={live} story={PLACEHOLDER_STORY} onClose={close} />;
+  return <JourneyScreen ride={live} story={story ?? PLACEHOLDER_STORY} onClose={close} />;
 }

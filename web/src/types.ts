@@ -39,10 +39,22 @@ export interface StorySource {
 
 export type StoryBody = { format: "plain"; text: string };
 
+export interface TimelineItem {
+  year: string;
+  text: string;
+  sources?: number[];
+}
+
+export type StoryBlock =
+  | { type: "paragraph"; text: string; sources?: number[] }
+  | { type: "image"; photo: number }
+  | { type: "timeline"; items: TimelineItem[] };
+
 export interface StoryContent {
   title: string;
   photos: [StoryPhoto, ...StoryPhoto[]];
   body: StoryBody;
+  blocks?: StoryBlock[];
   sources: StorySource[];
   audio?: string;
 }

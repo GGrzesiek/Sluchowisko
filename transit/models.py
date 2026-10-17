@@ -106,6 +106,10 @@ class Route(models.Model):
         # ZTM convention: route codes starting with "TP" are the main variants
         return self.code.upper().startswith("TP")
 
+    @property
+    def is_depot(self) -> bool:
+        return self.code.upper().startswith(("TD", "TZ"))
+
 
 class RouteStop(models.Model):
     route = models.ForeignKey(Route, on_delete=models.CASCADE, related_name="stops")
