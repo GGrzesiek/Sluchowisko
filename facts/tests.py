@@ -377,3 +377,96 @@ class StableRouteTest(TestCase):
         v.refresh_from_db()
         current = [s["name"] for s in build_ride_info(v)["stops"] if s["state"] == "current"]
         self.assertEqual(current, ["S1"])
+
+
+@override_settings(CITY_API_LIVE=False, WS_PUSH_INTERVAL_SECONDS=0.05)
+class RideAudioTest(RideSocketTestCase):
+    def setUp(self):
+        LiveRideStopsTest.setUp(self)
+        ingest_readings([live("3122", "22", 52.2478, 20.9860)])
+
+    def story(self, group_id, title, **extra):
+        from stories.models import Story
+
+        fields = {"title": title, "narration": "n", "text": "t", "status": Story.Status.VERIFIED, **extra}
+        return Story.objects.create(group_id=group_id, **fields)
+
+    async def audio_message(self, communicator):
+        while True:
+            msg = await self.receive(communicator)
+            if msg["type"] == "audio":
+                return msg["data"]
+
+    async def test_sends_audio_of_next_stop_group_once(self):
+        await database_sync_to_async(self.story)("5002", "Niska", audio_url="audio/5002.mp3", audio_seconds=42)
+        c = self.connect("3122")
+        await c.connect()
+        self.assertEqual((await self.receive(c))["type"], "route")
+        audio = await self.audio_message(c)
+        self.assertEqual(
+            audio,
+            {
+                "groupId": "5002",
+                "name": "Niska",
+                "available": True,
+                "src": "audio/5002.mp3",
+                "seconds": 42,
+                "aiVoice": True,
+            },
+        )
+        self.assertTrue(await c.receive_nothing(timeout=0.3))
+        await c.disconnect()
+
+    async def test_stop_already_passed_gets_no_audio(self):
+        await database_sync_to_async(self.story)("5001", "Powązkowska", audio_url="audio/5001.mp3", audio_seconds=9)
+        c = self.connect("3122")
+        await c.connect()
+        self.assertEqual((await self.audio_message(c))["groupId"], "5002")
+        await c.disconnect()
+
+    async def test_stop_group_without_recording_keeps_connection(self):
+        await database_sync_to_async(self.story)("5002", "Niska")
+        c = self.connect("3122")
+        await c.connect()
+        audio = await self.audio_message(c)
+        self.assertEqual(audio, {"groupId": "5002", "name": "Niska", "available": False})
+        self.assertTrue(await c.receive_nothing(timeout=0.3))
+        await c.send_json_to({"type": "ping"})
+        self.assertEqual((await self.receive(c))["type"], "pong")
+        await c.disconnect()
+
+    async def test_draft_story_audio_is_not_sent(self):
+        await database_sync_to_async(self.story)("5002", "Niska", status="draft")
+        c = self.connect("3122")
+        await c.connect()
+        self.assertFalse((await self.audio_message(c))["available"])
+        await c.disconnect()
+
+    async def test_reconnect_after_dropped_connection_sends_audio_again(self):
+        await database_sync_to_async(self.story)("5002", "Niska", audio_url="audio/5002.mp3", audio_seconds=42)
+        first = self.connect("3122")
+        await first.connect()
+        await self.receive(first)
+        await first.disconnect()
+        await asyncio.sleep(0.1)
+        self.assertEqual([t for t in asyncio.all_tasks() if "_push_loop" in repr(t)], [])
+        second = self.connect("3122")
+        await second.connect()
+        self.assertTrue((await self.audio_message(second))["available"])
+        await second.disconnect()
+
+    async def test_database_is_asked_only_when_the_group_changes(self):
+        await database_sync_to_async(self.story)("5002", "Niska", audio_url="audio/5002.mp3", audio_seconds=42)
+        await database_sync_to_async(self.story)("5003", "Okopowa", audio_url="audio/5003.mp3", audio_seconds=30)
+        with patch(
+            "facts.consumers._audio_message", wraps=__import__("facts.consumers").consumers._audio_message
+        ) as spy:
+            c = self.connect("3122")
+            await c.connect()
+            self.assertEqual((await self.audio_message(c))["groupId"], "5002")
+            await asyncio.sleep(0.3)
+            self.assertEqual(spy.call_count, 1)
+            await database_sync_to_async(ingest_readings)([live("3122", "22", 52.2458, 20.9860, seconds_ago=1)])
+            self.assertEqual((await self.audio_message(c))["groupId"], "5003")
+            self.assertEqual(spy.call_count, 2)
+            await c.disconnect()
