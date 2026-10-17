@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { ErrorBanner, NowPlayingBar } from "../components";
 import { PLACEHOLDER_RIDE, PLACEHOLDER_STORY } from "../data/placeholderRide";
 import { JourneyScreen } from "./JourneyScreen";
 import { FindingVehicleScreen } from "./FindingVehicleScreen";
@@ -48,7 +49,24 @@ export const SCREENS: ScreenEntry[] = [
   },
   { id: "end", number: "7", title: "Koniec jazdy", render: null },
   { id: "no-stories", number: "8", title: "Linia bez historii", render: null },
-  { id: "reconnecting", number: "8", title: "Utracone połączenie", render: null },
+  {
+    id: "reconnecting",
+    number: "8",
+    title: "Utracone połączenie",
+    render: () => (
+      <main className="mx-auto flex min-h-dvh w-full max-w-[430px] flex-col bg-paper p-4">
+        <ErrorBanner error={{ kind: "positionLost", line: "180", lastStop: "Stare Miasto" }} />
+        <NowPlayingBar
+          title="Hala Mirowska: targ, ruina i znów targ"
+          playing
+          elapsedLabel="01:05"
+          totalLabel="01:32"
+          progress={0.7}
+          className="mt-auto"
+        />
+      </main>
+    ),
+  },
   { id: "demo", number: "8", title: "Tryb demo", render: null },
 ];
 
