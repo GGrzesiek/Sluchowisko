@@ -30,6 +30,11 @@ Historie przygotowuje agent oparty na modelu Claude (Anthropic), uruchamiany w C
 5. Program nagrywa głosy, generuje dźwięki i muzykę w ElevenLabs, miksuje je i sprawdza długość nagrania.
 6. Człowiek przegląda historię i nagranie, zanim trafią do aplikacji.
 
+Research i tekst historii dla jednego przystanku przygotowuje też subagent `stop-story-writer`
+(`.claude/agents/stop-story-writer.md`). Sam wyszukuje i sprawdza źródła w sieci, zapisuje fakty z oceną pewności
+i pisze narrację (20–45 s) oraz tekst do czytania później. Każde zdanie musi mieć pokrycie w źródłach; rozbieżności
+między źródłami i fakty z jednego słabego źródła oddaje osobno, do sprawdzenia przez człowieka.
+
 ## Przy tworzeniu oprogramowania
 
 Zespół korzystał z asystentów AI (m.in. Claude Code) przy przeglądzie źródeł i API miasta, pisaniu kodu, konfiguracji
