@@ -1,0 +1,61 @@
+name: Promote to release
+
+# Promocja development → release przez fast-forward: release dostaje dokładnie te same
+# commity, które były na /dev/. Uruchamiane ręcznie z zakładki Actions.
+on:
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: Commit z development do promocji (puste = aktualny development)
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: promote
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fast-forward release
+        id: ff
+        env:
+          SHA: ${{ inputs.sha }}
+        run: |
+          set -euo pipefail
+          target=$(git rev-parse --verify "${SHA:-origin/development}^{commit}")
+          if ! git merge-base --is-ancestor "$target" origin/development; then
+            echo "::error::$target nie jest na gałęzi development"; exit 1
+          fi
+          if [ "$(git rev-parse origin/release)" = "$target" ]; then
+            echo "release już wskazuje $target — nic do zrobienia" >> "$GITHUB_STEP_SUMMARY"
+            echo "promoted=false" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          if ! git merge-base --is-ancestor origin/release "$target"; then
+            echo "::error::release ma commity, których nie ma w $target — fast-forward niemożliwy"; exit 1
+          fi
+
+          tag="release-$(date -u +%Y-%m-%d-%H%M%S)"
+          changes=$(git log --format='- `%h` %s — %an' "origin/release..$target")
+          git tag "$tag" "$target"
+          git push --atomic origin "$target:refs/heads/release" "refs/tags/$tag"
+
+          printf '### release → `%s` (`%s`)\n\n%s\n' "${target:0:7}" "$tag" "$changes" >> "$GITHUB_STEP_SUMMARY"
+          echo "promoted=true" >> "$GITHUB_OUTPUT"
+
+      # Push wykonany tokenem GITHUB_TOKEN nie uruchamia innych workflowów,
+      # więc deploy Pages trzeba odpalić ręcznie.
+      - name: Deploy Pages
+        if: steps.ff.outputs.promoted == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run pages.yml --ref development
