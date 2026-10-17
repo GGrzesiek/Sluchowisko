@@ -12,6 +12,8 @@ import type { RideInfo } from "./types";
 
 export type DeadEnd = Extract<RideProblem, "vehicleNotFound" | "noRoute">;
 
+export const MIN_LOADING_MS = 1200;
+
 interface FindVehicleProps {
   ride: Ride;
   onFound: (info: RideInfo) => void;
@@ -27,21 +29,31 @@ export function FindVehicle({ ride, onFound, onDeadEnd, onCancel }: FindVehicleP
   });
 
   useEffect(() => {
-    return openRideSocket(ride.vehicle, {
+    const shownAt = Date.now();
+    let pending: ReturnType<typeof setTimeout> | undefined;
+    const afterLoading = (next: () => void) => {
+      clearTimeout(pending);
+      pending = setTimeout(next, Math.max(0, MIN_LOADING_MS - (Date.now() - shownAt)));
+    };
+    const close = openRideSocket(ride.vehicle, {
       onRoute: (info) => {
         resolve("dataUnavailable");
         resolve("positionLost");
-        handlers.current.onFound(info);
+        afterLoading(() => handlers.current.onFound(info));
       },
       onProblem: (problem, line) => {
         if (problem === "vehicleNotFound" || problem === "noRoute") {
-          handlers.current.onDeadEnd(problem, line ?? ride.line);
+          afterLoading(() => handlers.current.onDeadEnd(problem, line ?? ride.line));
         } else {
           report(problem === "noLiveData" ? { kind: "positionLost", line: ride.line } : { kind: "dataUnavailable" });
         }
       },
       onDisconnect: () => report({ kind: "dataUnavailable" }),
     });
+    return () => {
+      clearTimeout(pending);
+      close();
+    };
   }, [ride.vehicle, ride.line, report, resolve]);
 
   return <FindingVehicleScreen ride={ride} onCancel={onCancel} />;
