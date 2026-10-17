@@ -307,3 +307,73 @@ class FetchAttemptsTest(TestCase):
         self.assertEqual(post.call_count, 1)
         sleep.assert_not_called()
         self.assertEqual(post.call_args.kwargs["timeout"], 5)
+
+
+class StableRouteTest(TestCase):
+    def setUp(self):
+        cache.clear()
+        self.line = Line.objects.create(number="22", kind=Line.TRAM)
+        self.stops = [
+            Stop.objects.create(zespol=str(6000 + i), slupek="01", name=f"S{i}", lat=52.2400, lon=21.0000 + i * 0.003)
+            for i in range(5)
+        ]
+        self.main = self.route("TP-EAST", "Wschód", self.stops)
+        self.depot = self.route("TZ-DEPOT", "Zajezdnia", self.stops[:3])
+        self.west = self.route("TP-WEST", "Zachód", list(reversed(self.stops)))
+
+    def route(self, code, last, stops):
+        route = Route.objects.create(line=self.line, code=code, last_stop_name=last, stop_count=len(stops))
+        for order, stop in enumerate(stops, 1):
+            RouteStop.objects.create(route=route, order=order, zespol=stop.zespol, slupek="01", stop=stop)
+        return route
+
+    def vehicle(self, lon, heading=None, speed=0.0, seconds_ago=5):
+        return Vehicle.objects.create(
+            number="3157",
+            line="22",
+            brigade="1",
+            lat=52.2400,
+            lon=lon,
+            heading=heading,
+            speed_mps=speed,
+            reported_at=timezone.now() - timedelta(seconds=seconds_ago),
+        )
+
+    def test_depot_run_never_wins_on_a_shared_main_segment(self):
+        from .ride_progress import build_ride_info
+
+        v = self.vehicle(21.0040, heading=90)
+        destinations = set()
+        for _ in range(5):
+            cache.delete("ride:route:3157")
+            destinations.add(build_ride_info(v)["destination"])
+        self.assertEqual(destinations, {"Wschód"})
+
+    def test_remembered_direction_survives_a_stationary_vehicle(self):
+        from .ride_progress import build_ride_info
+
+        v = self.vehicle(21.0040, heading=270)
+        self.assertEqual(build_ride_info(v)["destination"], "Zachód")
+        Vehicle.objects.filter(pk=v.pk).update(heading=None)
+        v.refresh_from_db()
+        self.assertEqual(build_ride_info(v)["destination"], "Zachód")
+
+    def test_turning_around_switches_direction(self):
+        from .ride_progress import build_ride_info
+
+        v = self.vehicle(21.0040, heading=90)
+        self.assertEqual(build_ride_info(v)["destination"], "Wschód")
+        Vehicle.objects.filter(pk=v.pk).update(heading=270)
+        v.refresh_from_db()
+        self.assertEqual(build_ride_info(v)["destination"], "Zachód")
+
+    def test_position_moves_along_the_route_since_the_reading(self):
+        from .ride_progress import build_ride_info
+
+        v = self.vehicle(21.0040, heading=90, speed=6.0, seconds_ago=25)
+        current = [s["name"] for s in build_ride_info(v)["stops"] if s["state"] == "current"]
+        self.assertEqual(current, ["S2"])
+        Vehicle.objects.filter(pk=v.pk).update(speed_mps=0.0)
+        v.refresh_from_db()
+        current = [s["name"] for s in build_ride_info(v)["stops"] if s["state"] == "current"]
+        self.assertEqual(current, ["S1"])
