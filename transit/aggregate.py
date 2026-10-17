@@ -145,8 +145,7 @@ def build_snapshot(
                     type="stop",
                     id=f"{s.zespol}-{s.slupek}",
                     name=s.name,
-                    lines=",".join(sorted(lines_at.get((s.zespol, s.slupek), ()), key=lambda x: (len(x), x)))
-                    or None,
+                    lines=",".join(sorted(lines_at.get((s.zespol, s.slupek), ()), key=lambda x: (len(x), x))) or None,
                     lat=s.lat,
                     lon=s.lon,
                     direction=s.direction or None,

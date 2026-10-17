@@ -42,9 +42,7 @@ def _parallel(func, items, workers):
                 yield futures[f], None, e
 
 
-def crawl_stop_lines(
-    stops=None, workers: int | None = None, max_age_hours: float | None = None, progress=None
-) -> dict:
+def crawl_stop_lines(stops=None, workers: int | None = None, max_age_hours: float | None = None, progress=None) -> dict:
     """Ask "which lines stop here?" for every stop post. ~1 request per stop post, run in parallel.
 
     max_age_hours: skip stops checked more recently than this (makes the crawl resumable).
@@ -57,9 +55,7 @@ def crawl_stop_lines(
 
     done = errors = 0
     first_error = None
-    for stop, lines, err in _parallel(
-        lambda s: warsaw_api.fetch_lines_at_stop(s.zespol, s.slupek), stops, workers
-    ):
+    for stop, lines, err in _parallel(lambda s: warsaw_api.fetch_lines_at_stop(s.zespol, s.slupek), stops, workers):
         if err:
             errors += 1
             first_error = first_error or err
@@ -91,9 +87,7 @@ def order_route(times_by_brigade: dict) -> list:
     """
     if not times_by_brigade:
         return []
-    best = max(
-        times_by_brigade.values(), key=lambda by_stop: (len(by_stop), -min(min(t) for t in by_stop.values()))
-    )
+    best = max(times_by_brigade.values(), key=lambda by_stop: (len(by_stop), -min(min(t) for t in by_stop.values())))
     return [stop for stop, _ in sorted(best.items(), key=lambda kv: min(kv[1]))]
 
 
@@ -126,9 +120,7 @@ def build_line_routes(line_number: str, workers: int | None = None) -> dict:
 
     by_pk = {s.pk: s for s in stops}
     with transaction.atomic():
-        line, _ = Line.objects.update_or_create(
-            number=line_number, defaults={"kind": classify_line(line_number)}
-        )
+        line, _ = Line.objects.update_or_create(number=line_number, defaults={"kind": classify_line(line_number)})
         line.routes.all().delete()
         built = []
         for code, by_brigade in sorted(times.items()):

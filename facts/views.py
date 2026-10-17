@@ -20,9 +20,7 @@ def _device_id(request):
 def ride(request, vehicle_number):
     """Main endpoint: the QR code opens /ride/<vehicle_number>, the app polls this every ~10 s."""
     v = get_object_or_404(Vehicle, number=vehicle_number)
-    (lat, lon), items = upcoming_facts(
-        v, _device_id(request), limit=int(request.query_params.get("limit", 5))
-    )
+    (lat, lon), items = upcoming_facts(v, _device_id(request), limit=int(request.query_params.get("limit", 5)))
     return Response(
         {
             "vehicle": VehicleSerializer(v).data,
@@ -64,8 +62,7 @@ def nearby_stops(request):
     radius = int(request.query_params.get("radius", 500))
     a, b, c, d = bbox(lat, lon, radius)
     stops = [
-        (s, haversine_m(lat, lon, s.lat, s.lon))
-        for s in Stop.objects.filter(lat__range=(a, b), lon__range=(c, d))
+        (s, haversine_m(lat, lon, s.lat, s.lon)) for s in Stop.objects.filter(lat__range=(a, b), lon__range=(c, d))
     ]
     stops = sorted([x for x in stops if x[1] <= radius], key=lambda x: x[1])
     return Response([{**StopSerializer(s).data, "distance_m": round(dist)} for s, dist in stops])

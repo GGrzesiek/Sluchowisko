@@ -5,26 +5,30 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('transit', '0002_line_route_routestop'),
+        ("transit", "0002_line_route_routestop"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='stop',
-            name='lines_checked_at',
+            model_name="stop",
+            name="lines_checked_at",
             field=models.DateTimeField(blank=True, null=True),
         ),
         migrations.CreateModel(
-            name='StopLine',
+            name="StopLine",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('line', models.CharField(db_index=True, max_length=10)),
-                ('stop', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='stop_lines', to='transit.stop')),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("line", models.CharField(db_index=True, max_length=10)),
+                (
+                    "stop",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE, related_name="stop_lines", to="transit.stop"
+                    ),
+                ),
             ],
             options={
-                'unique_together': {('stop', 'line')},
+                "unique_together": {("stop", "line")},
             },
         ),
     ]

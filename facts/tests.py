@@ -35,9 +35,7 @@ class RideFlowTest(TestCase):
         self.assertIn("Prezent, o który nikt nie prosił", titles)
 
         fact_id = r.json()["facts"][0]["id"]
-        self.assertEqual(
-            self.client.post(f"/api/facts/{fact_id}/seen/", HTTP_X_DEVICE_ID="dev-1").status_code, 204
-        )
+        self.assertEqual(self.client.post(f"/api/facts/{fact_id}/seen/", HTTP_X_DEVICE_ID="dev-1").status_code, 204)
         r2 = self.client.get("/api/ride/3201/", HTTP_X_DEVICE_ID="dev-1")
         self.assertNotIn(fact_id, [f["id"] for f in r2.json()["facts"]])
 

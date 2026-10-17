@@ -206,9 +206,7 @@ class LlmContextTest(TestCase):
                 "name": "Near Centrum",
                 "lat": 52.2305,
                 "lon": 21.0105,
-                "facts": [
-                    {"title": "Ok", "text": "Real fact.", "source_url": "https://pl.wikipedia.org/wiki/X"}
-                ],
+                "facts": [{"title": "Ok", "text": "Real fact.", "source_url": "https://pl.wikipedia.org/wiki/X"}],
             },
             {
                 "name": "Far away",

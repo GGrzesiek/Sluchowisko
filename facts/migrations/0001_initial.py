@@ -5,7 +5,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = []
@@ -30,11 +29,7 @@ class Migration(migrations.Migration):
                 ("image_url", models.URLField(blank=True)),
             ],
             options={
-                "indexes": [
-                    models.Index(
-                        fields=["lat", "lon"], name="facts_place_lat_cb7542_idx"
-                    )
-                ],
+                "indexes": [models.Index(fields=["lat", "lon"], name="facts_place_lat_cb7542_idx")],
             },
         ),
         migrations.CreateModel(
@@ -84,9 +79,7 @@ class Migration(migrations.Migration):
                 ("vehicle_number", models.CharField(blank=True, max_length=20)),
                 (
                     "fact",
-                    models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE, to="facts.fact"
-                    ),
+                    models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="facts.fact"),
                 ),
             ],
             options={

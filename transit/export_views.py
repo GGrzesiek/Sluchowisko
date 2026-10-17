@@ -31,9 +31,7 @@ def snapshot(request):
         return Response({"detail": "radius must be a number"}, status=status.HTTP_400_BAD_REQUEST)
     resp = Response(rows)
     if q.get("download"):
-        resp["Content-Disposition"] = (
-            f'attachment; filename="snapshot_{q.get("line") or q.get("type", "tram")}.json"'
-        )
+        resp["Content-Disposition"] = f'attachment; filename="snapshot_{q.get("line") or q.get("type", "tram")}.json"'
     return resp
 
 

@@ -4,7 +4,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = []
@@ -72,11 +71,7 @@ class Migration(migrations.Migration):
                 ("direction", models.CharField(blank=True, max_length=200)),
             ],
             options={
-                "indexes": [
-                    models.Index(
-                        fields=["lat", "lon"], name="transit_sto_lat_ba5c55_idx"
-                    )
-                ],
+                "indexes": [models.Index(fields=["lat", "lon"], name="transit_sto_lat_ba5c55_idx")],
                 "unique_together": {("zespol", "slupek")},
             },
         ),

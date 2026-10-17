@@ -131,9 +131,7 @@ class LineViewSet(viewsets.ReadOnlyModelViewSet):
         data = cache.get(key)
         if data is None:
             try:
-                readings = warsaw_api.fetch_vehicle_positions(
-                    line=line.number, vehicle_type=line.vehicle_type
-                )
+                readings = warsaw_api.fetch_vehicle_positions(line=line.number, vehicle_type=line.vehicle_type)
             except warsaw_api.WarsawApiError as e:
                 return Response({"detail": f"City API unavailable: {e}"}, status=status.HTTP_502_BAD_GATEWAY)
             data = [
@@ -160,9 +158,7 @@ class LineViewSet(viewsets.ReadOnlyModelViewSet):
             corridor_m=int(corridor) if corridor and corridor.isdigit() else None,
         )
         if ctx is None:
-            return Response(
-                {"detail": "No route for this line, run sync_city_data"}, status=status.HTTP_404_NOT_FOUND
-            )
+            return Response({"detail": "No route for this line, run sync_city_data"}, status=status.HTTP_404_NOT_FOUND)
         return Response(ctx)
 
     @action(detail=True, methods=["post"], url_path="validate-places")
