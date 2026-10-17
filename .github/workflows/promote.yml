@@ -41,9 +41,8 @@ jobs:
           fi
 
           tag="release-$(date -u +%Y-%m-%d-%H%M%S)"
-          changes=$(git log --format='- `%h` %s (%an)' "origin/release..$target")
+          changes=$(git log --format="- \`%h\` %s (%an)" "origin/release..$target")
           git tag "$tag" "$target"
           git push --atomic origin "$target:refs/heads/release" "refs/tags/$tag"
 
-          printf '### release → `%s` (`%s`)\n\n%s\n' "${target:0:7}" "$tag" "$changes" >> "$GITHUB_STEP_SUMMARY"
-
+          printf "### release → \`%s\` (\`%s\`)\n\n%s\n" "${target:0:7}" "$tag" "$changes" >> "$GITHUB_STEP_SUMMARY"

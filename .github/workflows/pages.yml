@@ -25,7 +25,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          export PAGES_BASE_PATH=$(gh api "repos/$GITHUB_REPOSITORY/pages" --jq '.html_url | sub("^https?://[^/]+"; "")')
+          PAGES_BASE_PATH=$(gh api "repos/$GITHUB_REPOSITORY/pages" --jq '.html_url | sub("^https?://[^/]+"; "")')
+          export PAGES_BASE_PATH
           python3 .github/pages/build.py _site
 
       - name: Publish to gh-pages
