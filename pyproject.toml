@@ -12,10 +12,7 @@ dynamic = ["dependencies"]
 dependencies = { file = ["requirements.txt"] }
 
 [tool.setuptools.packages.find]
-include = ["config*", "transit*", "facts*", "collector*", "stories*", "story_agent*"]
-
-[tool.setuptools.package-data]
-story_agent = ["voices.json"]
+include = ["config*", "transit*", "facts*", "collector*", "stories*"]
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "config.settings"

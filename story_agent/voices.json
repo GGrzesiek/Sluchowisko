@@ -1,8 +1,0 @@
-{
-  "model_id": "eleven_v3",
-  "voices": {
-    "narrator": { "voice_id": "H5xTcsAIeS5RAykjz57a", "name": "Alex - Warm Storyteller" },
-    "co_narrator": { "voice_id": "N0GCuK2B0qwWozQNTS8F", "name": "Magdalena - Mighty and Calm Wordsmith" },
-    "archive": { "voice_id": "xsSg7GkDPDhaGZpbKOLn", "name": "Tomasz Z - Expressive and Deep" }
-  }
-}
