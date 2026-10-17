@@ -46,6 +46,7 @@ resource "google_iam_workload_identity_pool_provider" "github" {
   attribute_mapping = {
     "google.subject"       = "assertion.sub"
     "attribute.repository" = "assertion.repository"
+    "attribute.ref"        = "assertion.ref"
   }
 
   oidc {
@@ -86,5 +87,5 @@ resource "google_service_account_iam_member" "plan" {
 resource "google_service_account_iam_member" "apply" {
   service_account_id = google_service_account.apply.name
   role               = "roles/iam.workloadIdentityUser"
-  member             = "principal://iam.googleapis.com/${google_iam_workload_identity_pool.github.name}/subject/repo:${var.repository}:ref:refs/heads/${var.apply_branch}"
+  member             = "principalSet://iam.googleapis.com/${google_iam_workload_identity_pool.github.name}/attribute.ref/refs/heads/${var.apply_branch}"
 }
