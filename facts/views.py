@@ -66,3 +66,15 @@ def nearby_stops(request):
     ]
     stops = sorted([x for x in stops if x[1] <= radius], key=lambda x: x[1])
     return Response([{**StopSerializer(s).data, "distance_m": round(dist)} for s, dist in stops])
+
+
+@api_view(["GET"])
+def ride_stops(request, vehicle_number):
+    """RideInfo for the frontend: the vehicle's route with passed/current/next/upcoming stops."""
+    from .ride_progress import NoRouteError, build_ride_info
+
+    v = get_object_or_404(Vehicle, number=vehicle_number)
+    try:
+        return Response(build_ride_info(v))
+    except NoRouteError as e:
+        return Response({"detail": str(e)}, status=status.HTTP_404_NOT_FOUND)
