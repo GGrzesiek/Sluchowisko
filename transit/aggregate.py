@@ -23,7 +23,7 @@ LIVE_CACHE_SECONDS = 10
 
 COLUMNS = [
     "type",  # "stop" | "vehicle"
-    "id",  # stop: "zespol-slupek", vehicle: side number
+    "id",  # stop: "zespol-slupek", vehicle: fleet number
     "name",  # stop name / "Tram 17 #3201"
     "lines",  # stop: lines serving it "17,33"; vehicle: its line
     "lat",

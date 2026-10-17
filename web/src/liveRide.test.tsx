@@ -85,17 +85,18 @@ describe("live ride", () => {
   it("says when the vehicle is not on the road", async () => {
     openRide();
     act(() => socket().receive("error", { code: "vehicle_not_found" }));
-    expect(await screen.findByRole("heading", { name: "Nie widzimy pojazdu 3122" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Nie widzimy tego pojazdu" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Pojazd 3122" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Wpisz inny numer" }));
-    expect(screen.getByLabelText("Numer boczny pojazdu")).toBeInTheDocument();
+    expect(screen.getByLabelText("Numer taborowy pojazdu")).toBeInTheDocument();
   });
 
   it("says when the line has no stories yet", async () => {
     openRide();
     act(() => socket().receive("error", { code: "no_route", line: "999" }));
-    expect(
-      await screen.findByRole("heading", { name: "Nie mamy jeszcze historii dla linii 999." }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Nie mamy jeszcze historii dla tej linii" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Linia 999" })).toBeInTheDocument();
+    expect(screen.getByRole("list", { name: "Linie z historiami" })).toHaveTextContent("2218179169117");
   });
 
   it("keeps waiting while there is no live data, then moves on", async () => {

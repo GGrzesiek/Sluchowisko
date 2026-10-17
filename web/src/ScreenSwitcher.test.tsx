@@ -37,20 +37,20 @@ describe("ScreenSwitcher", () => {
   it("clears the link when the ride is cancelled", () => {
     openAt("/?line=180&vehicle=1234");
     fireEvent.click(screen.getByRole("button", { name: "Anuluj" }));
-    expect(screen.getByRole("button", { name: "Wpisz numer boczny pojazdu" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Wpisz numer taborowy pojazdu" })).toBeInTheDocument();
     expect(window.location.search).toBe("");
   });
 
   it("focuses the number field as soon as manual entry opens", () => {
     openAt("/");
-    fireEvent.click(screen.getByRole("button", { name: "Wpisz numer boczny pojazdu" }));
-    expect(screen.getByLabelText("Numer boczny pojazdu")).toHaveFocus();
+    fireEvent.click(screen.getByRole("button", { name: "Wpisz numer taborowy pojazdu" }));
+    expect(screen.getByLabelText("Numer taborowy pojazdu")).toHaveFocus();
   });
 
   it("finds the vehicle typed on the manual entry screen", () => {
     openAt("/");
-    fireEvent.click(screen.getByRole("button", { name: "Wpisz numer boczny pojazdu" }));
-    fireEvent.change(screen.getByLabelText("Numer boczny pojazdu"), { target: { value: "1234" } });
+    fireEvent.click(screen.getByRole("button", { name: "Wpisz numer taborowy pojazdu" }));
+    fireEvent.change(screen.getByLabelText("Numer taborowy pojazdu"), { target: { value: "1234" } });
     fireEvent.click(screen.getByRole("button", { name: "Znajdź mój pojazd" }));
     expect(screen.getByRole("heading", { name: "Szukamy Twojego autobusu…" })).toBeInTheDocument();
     expect(screen.getByLabelText("Pojazd 1234")).toBeInTheDocument();
@@ -59,12 +59,12 @@ describe("ScreenSwitcher", () => {
   it("keeps the gallery screen previews working", () => {
     openAt("/#/manual");
     expect(screen.getByRole("heading", { name: "Którym autobusem lub tramwajem jedziesz?" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Wpisz numer boczny pojazdu" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Wpisz numer taborowy pojazdu" })).not.toBeInTheDocument();
   });
 
   it("leads from the start screen to manual entry and to the scanner", async () => {
     openAt("/");
-    fireEvent.click(screen.getByRole("button", { name: "Wpisz numer boczny pojazdu" }));
+    fireEvent.click(screen.getByRole("button", { name: "Wpisz numer taborowy pojazdu" }));
     expect(screen.getByRole("heading", { name: "Którym autobusem lub tramwajem jedziesz?" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Wstecz" }));
     fireEvent.click(await screen.findByRole("button", { name: "Zeskanuj kod QR" }));

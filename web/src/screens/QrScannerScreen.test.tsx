@@ -44,7 +44,7 @@ describe("QrScannerScreen", () => {
   it("offers manual entry when the camera is unavailable", async () => {
     camera.start = () => Promise.reject(new DOMException("Permission denied", "NotAllowedError"));
     const { onEnterVehicleNumber } = renderScreen();
-    fireEvent.click(await screen.findByRole("button", { name: "Wpisz numer boczny" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Wpisz numer taborowy" }));
     expect(screen.getByRole("status")).toHaveTextContent("Nie mamy dostępu do aparatu");
     expect(onEnterVehicleNumber).toHaveBeenCalled();
   });

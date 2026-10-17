@@ -8,7 +8,7 @@ function setup() {
   return {
     onBack,
     onSubmit,
-    input: screen.getByLabelText("Numer boczny pojazdu"),
+    input: screen.getByLabelText("Numer taborowy pojazdu"),
     button: screen.getByRole("button", { name: "Znajdź mój pojazd" }),
   };
 }
@@ -32,7 +32,7 @@ describe("ManualEntryScreen", () => {
     expect(screen.getByRole("heading", { name: "Którym autobusem lub tramwajem jedziesz?" })).toBeInTheDocument();
     expect(input).toHaveAttribute("inputmode", "numeric");
     expect(input).toHaveAttribute("placeholder", "np. 1234");
-    expect(screen.getByText("Szukaj nad drzwiami albo przy kabinie kierowcy. To 4 cyfry.")).toBeInTheDocument();
+    expect(input).toHaveAccessibleDescription("Numer jest wypisany w środku pojazdu, nad przednią i tylną szybą.");
   });
 
   it("disables the button until exactly four digits are entered", () => {
