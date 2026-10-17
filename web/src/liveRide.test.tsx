@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { ErrorStatusProvider } from "./ErrorStatus";
+import { MIN_LOADING_MS } from "./liveRide";
 import { ScreenSwitcher } from "./ScreenSwitcher";
 import { FakeWebSocket } from "./test-setup";
 
@@ -23,6 +24,11 @@ function ride(current: string) {
 
 const socket = () => FakeWebSocket.instances[FakeWebSocket.instances.length - 1];
 
+async function answer(type: string, data: unknown) {
+  act(() => socket().receive(type, data));
+  await act(() => vi.advanceTimersByTimeAsync(MIN_LOADING_MS));
+}
+
 function openRide() {
   window.history.replaceState(null, "", "/?line=22&vehicle=3122");
   render(
@@ -33,6 +39,10 @@ function openRide() {
 }
 
 describe("live ride", () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+  });
+
   afterEach(() => {
     window.history.replaceState(null, "", "/");
     vi.useRealTimers();
@@ -45,24 +55,24 @@ describe("live ride", () => {
 
   it("shows the vehicle's real route once the backend pushes it", async () => {
     openRide();
-    act(() => socket().receive("route", ride("Okopowa")));
+    await answer("route", ride("Okopowa"));
     expect(await screen.findByText("→ Wiatraczna")).toBeInTheDocument();
     expect(screen.getByRole("img", { name: /teraz Okopowa/ })).toBeInTheDocument();
   });
 
   it("updates the route when the backend pushes a new one", async () => {
     openRide();
-    act(() => socket().receive("route", ride("Okopowa")));
+    await answer("route", ride("Okopowa"));
     await screen.findByText("→ Wiatraczna");
-    act(() => socket().receive("route", ride("Wola")));
+    await answer("route", ride("Wola"));
     expect(screen.getByRole("img", { name: /teraz Wola/ })).toBeInTheDocument();
   });
 
   it("keeps the last route and shows a banner when the backend loses the position", async () => {
     openRide();
-    act(() => socket().receive("route", ride("Okopowa")));
+    await answer("route", ride("Okopowa"));
     await screen.findByText("→ Wiatraczna");
-    act(() => socket().receive("error", { code: "no_live_data" }));
+    await answer("error", { code: "no_live_data" });
     expect(screen.getByText("Łączymy ponownie…")).toBeInTheDocument();
     expect(screen.getByRole("img", { name: /teraz Okopowa/ })).toBeInTheDocument();
   });
@@ -70,21 +80,21 @@ describe("live ride", () => {
   it("reconnects after the connection drops and recovers", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     openRide();
-    act(() => socket().receive("route", ride("Okopowa")));
+    await answer("route", ride("Okopowa"));
     await screen.findByText("→ Wiatraczna");
     const first = socket();
     act(() => first.drop());
     expect(screen.getByText("Łączymy ponownie…")).toBeInTheDocument();
     await act(() => vi.advanceTimersByTimeAsync(1_000));
     expect(FakeWebSocket.instances).toHaveLength(3);
-    act(() => socket().receive("route", ride("Wola")));
+    await answer("route", ride("Wola"));
     expect(screen.queryByText("Łączymy ponownie…")).not.toBeInTheDocument();
     expect(screen.getByRole("img", { name: /teraz Wola/ })).toBeInTheDocument();
   });
 
   it("says when the vehicle is not on the road", async () => {
     openRide();
-    act(() => socket().receive("error", { code: "vehicle_not_found" }));
+    await answer("error", { code: "vehicle_not_found" });
     expect(await screen.findByRole("heading", { name: "Nie widzimy tego pojazdu" })).toBeInTheDocument();
     expect(screen.getByRole("img", { name: "Pojazd 3122" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Wpisz inny numer" }));
@@ -93,7 +103,7 @@ describe("live ride", () => {
 
   it("says when the line has no stories yet", async () => {
     openRide();
-    act(() => socket().receive("error", { code: "no_route", line: "999" }));
+    await answer("error", { code: "no_route", line: "999" });
     expect(await screen.findByRole("heading", { name: "Nie mamy jeszcze historii dla tej linii" })).toBeInTheDocument();
     expect(screen.getByRole("img", { name: "Linia 999" })).toBeInTheDocument();
     expect(screen.getByRole("list", { name: "Linie z historiami" })).toHaveTextContent("2218179169117");
@@ -101,9 +111,9 @@ describe("live ride", () => {
 
   it("keeps waiting while there is no live data, then moves on", async () => {
     openRide();
-    act(() => socket().receive("error", { code: "no_live_data" }));
+    await answer("error", { code: "no_live_data" });
     expect(await screen.findByText("Łączymy ponownie…")).toBeInTheDocument();
-    act(() => socket().receive("route", ride("Okopowa")));
+    await answer("route", ride("Okopowa"));
     expect(await screen.findByText("→ Wiatraczna")).toBeInTheDocument();
     expect(screen.queryByText("Łączymy ponownie…")).not.toBeInTheDocument();
   });
@@ -118,13 +128,31 @@ describe("live ride", () => {
 
   it("starts the story when the passenger taps Zaczynamy and stops it when the ride ends", async () => {
     openRide();
-    act(() => socket().receive("route", ride("Okopowa")));
+    await answer("route", ride("Okopowa"));
     fireEvent.click(await screen.findByRole("button", { name: "Zaczynamy" }));
 
     expect(HTMLMediaElement.prototype.play).toHaveBeenCalledTimes(1);
     expect(await screen.findByRole("button", { name: "Pauza" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Zakończ przejazd" }));
     expect(HTMLMediaElement.prototype.pause).toHaveBeenCalled();
+  });
+
+  it("keeps the loading screen up for a moment when the answer comes at once", async () => {
+    openRide();
+    act(() => socket().receive("error", { code: "vehicle_not_found" }));
+    await act(() => vi.advanceTimersByTimeAsync(MIN_LOADING_MS - 100));
+    expect(screen.getByRole("heading", { name: "Szukamy Twojego autobusu…" })).toBeInTheDocument();
+
+    await act(() => vi.advanceTimersByTimeAsync(100));
+    expect(screen.getByRole("heading", { name: "Nie widzimy tego pojazdu" })).toBeInTheDocument();
+  });
+
+  it("does not hold a slow answer any longer", async () => {
+    openRide();
+    await act(() => vi.advanceTimersByTimeAsync(MIN_LOADING_MS * 2));
+    act(() => socket().receive("error", { code: "vehicle_not_found" }));
+    await act(() => vi.advanceTimersByTimeAsync(0));
+    expect(screen.getByRole("heading", { name: "Nie widzimy tego pojazdu" })).toBeInTheDocument();
   });
 
   it("closes the socket after the ride is cancelled", () => {

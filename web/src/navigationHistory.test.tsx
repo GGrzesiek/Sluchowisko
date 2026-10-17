@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { ErrorStatusProvider } from "./ErrorStatus";
+import { MIN_LOADING_MS } from "./liveRide";
 import { ScreenSwitcher } from "./ScreenSwitcher";
 import { FakeWebSocket } from "./test-setup";
 
@@ -17,6 +18,11 @@ const ride = {
 };
 
 const socket = () => FakeWebSocket.instances[FakeWebSocket.instances.length - 1];
+
+async function answer(type: string, data: unknown) {
+  act(() => socket().receive(type, data));
+  await act(() => vi.advanceTimersByTimeAsync(MIN_LOADING_MS));
+}
 const heading = (name: string) => screen.findByRole("heading", { name });
 const MANUAL = "Którym autobusem lub tramwajem jedziesz?";
 const SEARCHING = "Szukamy Twojego autobusu…";
@@ -52,12 +58,19 @@ async function typeVehicle(number: string) {
 }
 
 describe("navigation history", () => {
-  afterEach(() => window.history.replaceState(null, "", "/"));
+  beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+  });
+
+  afterEach(() => {
+    window.history.replaceState(null, "", "/");
+    vi.useRealTimers();
+  });
 
   it("goes back through every screen of a ride with the browser back button", async () => {
     open();
     await typeVehicle("3122");
-    act(() => socket().receive("route", ride));
+    await answer("route", ride);
     fireEvent.click(await screen.findByRole("button", { name: "Zaczynamy" }));
     expect(await screen.findByRole("button", { name: "Zakończ przejazd" })).toBeInTheDocument();
 
@@ -72,7 +85,7 @@ describe("navigation history", () => {
   it("does not trap the user on the searching screen after the vehicle is found", async () => {
     open();
     await typeVehicle("3122");
-    act(() => socket().receive("route", ride));
+    await answer("route", ride);
     await screen.findByRole("button", { name: "Zaczynamy" });
     await back();
     expect(screen.queryByRole("heading", { name: SEARCHING })).not.toBeInTheDocument();
@@ -82,7 +95,7 @@ describe("navigation history", () => {
   it("goes forward again to the ride after going back", async () => {
     open();
     await typeVehicle("3122");
-    act(() => socket().receive("route", ride));
+    await answer("route", ride);
     await screen.findByRole("button", { name: "Zaczynamy" });
     await back();
     await heading(MANUAL);
@@ -94,7 +107,7 @@ describe("navigation history", () => {
   it("lets the user go back from a dead end to the number entry", async () => {
     open();
     await typeVehicle("4040");
-    act(() => socket().receive("error", { code: "vehicle_not_found" }));
+    await answer("error", { code: "vehicle_not_found" });
     await heading("Nie widzimy tego pojazdu");
     await back();
     expect(await heading(MANUAL)).toBeInTheDocument();
