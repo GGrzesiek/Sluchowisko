@@ -22,11 +22,16 @@ przystanku:
    naukowe i źródła z epoki.
 2. Zapisuje fakty z oceną pewności. Fakt z jednego słabego źródła nie trafia do historii, a rozbieżności między
    źródłami (np. różne daty) oddaje osobno.
-3. Wybiera historię, która łączy się z miejscem (co tu się wydarzyło, co widać z okna, skąd nazwa), i pisze narrację
-   na 20–45 sekund oraz dłuższy tekst do czytania później. Każde zdanie ma pokrycie w źródłach.
+3. Wybiera wątek, który łączy się z miejscem (co tu się wydarzyło, co widać z okna, skąd nazwa), i układa z faktów
+   scenariusz słuchowiska na 1–3 minuty dla jednego narratora oraz dłuższy tekst do czytania później. Każde zdanie
+   ma pokrycie w źródłach. Scenariusz opisuje też ambient zgodny z treścią i krótkie głosy w tle, które budują klimat,
+   ale nie przekazują faktów.
 4. Przed oddaniem sprawdza oba teksty zdanie po zdaniu: czy każde ma źródło, czy nie wyciąga wniosków z samej
    zbieżności faktów i czy nie cytuje tekstów spoza domeny publicznej.
 5. Człowiek przegląda historię i jej źródła, zanim trafi do aplikacji.
+
+Nagranie powstaje skryptem `tools/render_drama.py`. Narrację czyta syntetyczny głos ElevenLabs (model Eleven v4),
+ambient i głosy w tle też generuje ElevenLabs, a skrypt składa je w jeden plik MP3 i ścisza tło pod głosem narratora.
 
 ## Przy tworzeniu oprogramowania
 
