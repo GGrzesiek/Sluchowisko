@@ -24,3 +24,5 @@ _site/
 *.tfvars
 !*.tfvars.example
 tfplan
+db.sqlite3
+*.sqlite3
