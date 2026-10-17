@@ -1,6 +1,8 @@
+import io
 import json
 import tempfile
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 from django.core.management import call_command
 from django.test import TestCase, override_settings
@@ -12,6 +14,9 @@ from transit.models import Line, Route, RouteStop, Stop, Vehicle
 from .models import Story
 
 TOKEN = "test-token"
+MEDIA_BUCKET = "test-media"
+MEDIA = f"https://storage.googleapis.com/{MEDIA_BUCKET}"
+COMMONS = "https://commons.wikimedia.org/wiki/File:Hala.jpg"
 
 
 def story_payload(group_id="7001", **extra):
@@ -21,7 +26,7 @@ def story_payload(group_id="7001", **extra):
         "text": "Dłuższy tekst do przeczytania.",
         "photos": [
             {
-                "src": "https://upload.wikimedia.org/a.jpg",
+                "src": f"{MEDIA}/photos/{group_id}/i1.jpg",
                 "alt": "Hala",
                 "year": "1936",
                 "caption": "Hala Mirowska",
@@ -35,7 +40,7 @@ def story_payload(group_id="7001", **extra):
     }
 
 
-@override_settings(STORIES_WRITE_TOKEN=TOKEN)
+@override_settings(STORIES_WRITE_TOKEN=TOKEN, GCS_MEDIA_BUCKET=MEDIA_BUCKET)
 class StoryApiTest(TestCase):
     def setUp(self):
         for group_id, name, lat in (("7001", "Alfa", 52.20), ("7002", "Beta", 52.21), ("7003", "Gamma", 52.22)):
@@ -149,3 +154,83 @@ class StoryApiTest(TestCase):
             call_command("export_stories", "--out", out, verbosity=0)
             self.assertEqual(json.loads((Path(out) / "index.json").read_text()), [{"groupId": "7001", "title": "Alfa"}])
             self.assertFalse((Path(out) / "7002.json").exists())
+
+
+def external_photo(**extra):
+    return {**story_payload()["photos"][0], "src": f"{COMMONS}?raw", "source_url": COMMONS, **extra}
+
+
+@override_settings(STORIES_WRITE_TOKEN=TOKEN, GCS_MEDIA_BUCKET=MEDIA_BUCKET)
+class PublishPhotosTest(TestCase):
+    def setUp(self):
+        Stop.objects.create(zespol="7001", slupek="01", name="Alfa", lat=52.20, lon=21.0)
+        self.agent = APIClient(HTTP_AUTHORIZATION=f"Bearer {TOKEN}")
+        self.out = Path(tempfile.mkdtemp()) / "out"
+        (self.out / "collected").mkdir(parents=True)
+        (self.out / "images" / "7001").mkdir(parents=True)
+        (self.out / "images" / "7001" / "i7.jpg").write_bytes(b"\xff\xd8\xff photo")
+        collected = {"images": [{"id": "i7", "url": COMMONS, "file": "out/images/7001/i7.jpg"}]}
+        (self.out / "collected" / "7001.json").write_text(json.dumps(collected))
+
+    def publish(self, *args):
+        stdout = io.StringIO()
+        with (
+            patch("stories.media.shutil.which", return_value="/usr/bin/gcloud"),
+            patch("stories.media.subprocess.run", return_value=MagicMock(returncode=0)) as run,
+        ):
+            call_command("publish_photos", "--out", str(self.out), *args, stdout=stdout)
+        return run, stdout.getvalue()
+
+    def test_uploads_collector_file_and_points_src_at_media(self):
+        Story.objects.create(group_id="7001", title="Alfa", narration="n", text="t", photos=[external_photo()])
+        run, _ = self.publish()
+        cmd = run.call_args.args[0]
+        self.assertEqual(cmd[1:3], ["storage", "cp"])
+        self.assertEqual(Path(cmd[3]), self.out / "images" / "7001" / "i7.jpg")
+        self.assertEqual(cmd[4], f"gs://{MEDIA_BUCKET}/photos/7001/i7.jpg")
+        photo = Story.objects.get().photos[0]
+        self.assertEqual(photo["src"], f"{MEDIA}/photos/7001/i7.jpg")
+        self.assertEqual(photo["source_url"], COMMONS)
+        self.assertEqual(photo["license"], "domena publiczna")
+
+    def test_skips_published_photos(self):
+        Story.objects.create(group_id="7001", title="Alfa", narration="n", text="t", photos=story_payload()["photos"])
+        run, _ = self.publish()
+        run.assert_not_called()
+
+    def test_reports_photo_without_collector_file(self):
+        other = external_photo(source_url="https://commons.wikimedia.org/wiki/File:Inny.jpg")
+        Story.objects.create(group_id="7001", title="Alfa", narration="n", text="t", photos=[other])
+        run, output = self.publish()
+        run.assert_not_called()
+        self.assertIn("File:Inny.jpg", output)
+        self.assertEqual(Story.objects.get().photos[0]["src"], other["src"])
+
+    def test_dry_run_uploads_nothing(self):
+        Story.objects.create(group_id="7001", title="Alfa", narration="n", text="t", photos=[external_photo()])
+        run, output = self.publish("--dry-run")
+        run.assert_not_called()
+        self.assertIn("photos/7001/i7.jpg", output)
+        self.assertEqual(Story.objects.get().photos[0]["src"], f"{COMMONS}?raw")
+
+    def test_rejected_stories_are_left_alone(self):
+        Story.objects.create(
+            group_id="7001", title="Alfa", narration="n", text="t", photos=[external_photo()], status="rejected"
+        )
+        run, _ = self.publish()
+        run.assert_not_called()
+
+    def test_verify_needs_photos_in_media_bucket(self):
+        self.agent.put("/api/stories/7001/", story_payload(photos=[external_photo()]), format="json")
+        r = self.agent.patch("/api/stories/7001/", {"status": "verified"}, format="json")
+        self.assertEqual(r.status_code, 400, r.content)
+        self.assertIn("photos", r.json())
+        self.publish()
+        r = self.agent.patch("/api/stories/7001/", {"status": "verified"}, format="json")
+        self.assertEqual(r.status_code, 200, r.content)
+
+    @override_settings(GCS_MEDIA_BUCKET="")
+    def test_verify_without_configured_bucket_keeps_any_src(self):
+        self.agent.put("/api/stories/7001/", story_payload(photos=[external_photo()]), format="json")
+        r = self.agent.patch("/api/stories/7001/", {"status": "verified"}, format="json")
+        self.assertEqual(r.status_code, 200, r.content)
