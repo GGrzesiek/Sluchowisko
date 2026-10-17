@@ -1,0 +1,45 @@
+name: Pages
+
+# Status strony gałęzi release i development.
+# Każdy push do którejkolwiek z nich przebudowuje całą stronę z obu gałęzi.
+on:
+  push:
+    branches: [release, development]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+  pull-requests: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build site
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 .github/pages/build.py _site
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
