@@ -1,17 +1,19 @@
 # Infrastructure (GCP)
 
 A shared database and recordings store for the team during development, so nobody works from a stale local copy.
-The app never talks to GCP. It still reads only static files (see `AGENTS.md`).
+The app talks to the backend on Cloud Run and loads photos and recordings from the public media bucket (see
+`AGENTS.md`).
 
-| What                      | Where                                                      |
-| ------------------------- | ---------------------------------------------------------- |
-| Project                   | `muzeum-w-autobusie-2026`, region `europe-central2`        |
-| PostgreSQL 16 (Cloud SQL) | instance `muzeum`, database `muzeum`, IAM login only       |
-| ElevenLabs recordings     | bucket `muzeum-w-autobusie-2026-audio`, private, versioned |
-| Facts collector output    | bucket `muzeum-w-autobusie-2026-data`, private, versioned  |
-| Terraform state           | bucket `muzeum-w-autobusie-2026-tfstate`                   |
-| Backend (Django)          | Cloud Run service `backend`, public HTTPS                  |
-| Owner and billing         | Grzesiek (#5)                                              |
+| What                              | Where                                                          |
+| --------------------------------- | -------------------------------------------------------------- |
+| Project                           | `muzeum-w-autobusie-2026`, region `europe-central2`            |
+| PostgreSQL 16 (Cloud SQL)         | instance `muzeum`, database `muzeum`, IAM login only           |
+| ElevenLabs recordings             | bucket `muzeum-w-autobusie-2026-audio`, private, versioned     |
+| Facts collector output            | bucket `muzeum-w-autobusie-2026-data`, private, versioned      |
+| Photos and recordings for the app | bucket `muzeum-w-autobusie-2026-media`, public read, versioned |
+| Terraform state                   | bucket `muzeum-w-autobusie-2026-tfstate`                       |
+| Backend (Django)                  | Cloud Run service `backend`, public HTTPS                      |
+| Owner and billing                 | Grzesiek (#5)                                                  |
 
 There are no passwords or key files anywhere. People sign in with their Google account, GitHub Actions with
 Workload Identity Federation.
@@ -66,12 +68,17 @@ cached for 10 s. Keep the service in a Polish region.
 
 ## Who can do what
 
-| Who                                                              | Database                       | Recordings and data buckets |
-| ---------------------------------------------------------------- | ------------------------------ | --------------------------- |
-| Writers: emails in the repo variable `INFRA_MEMBERS`             | read and write, as role `team` | read and write              |
-| Team: members of the Google Group `sluchowisko@googlegroups.com` | read only, as role `readers`   | read only                   |
+| Who                                                              | Database                       | `audio` and `data` buckets | `media` bucket                              |
+| ---------------------------------------------------------------- | ------------------------------ | -------------------------- | ------------------------------------------- |
+| Writers: emails in the repo variable `INFRA_MEMBERS`             | read and write, as role `team` | read and write             | read and write                              |
+| Team: members of the Google Group `sluchowisko@googlegroups.com` | read only, as role `readers`   | read only                  | read a file by its URL                      |
+| Anyone, including the app in a browser                           | none                           | none                       | read a file by its URL, not list the bucket |
 
 Data reaches GCP only through the writers. Everyone else reads the same copy.
+
+The `media` bucket holds only what the app shows: `photos/<groupId>/<imageId>.jpg` and `audio/<groupId>.mp3`, copied
+unmodified from the `data` and `audio` buckets. A story's `photos[].src` and audio URL point there, as
+`https://storage.googleapis.com/muzeum-w-autobusie-2026-media/<path>`.
 
 ## Getting read access (teammates)
 

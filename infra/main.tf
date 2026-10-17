@@ -35,6 +35,23 @@ resource "google_storage_bucket" "data" {
   }
 }
 
+resource "google_storage_bucket" "media" {
+  name                        = "${var.project_id}-media"
+  location                    = var.region
+  uniform_bucket_level_access = true
+  public_access_prevention    = "inherited"
+
+  versioning {
+    enabled = true
+  }
+}
+
+resource "google_storage_bucket_iam_member" "media_public" {
+  bucket = google_storage_bucket.media.name
+  role   = "roles/storage.legacyObjectReader"
+  member = "allUsers"
+}
+
 resource "google_sql_database_instance" "main" {
   name                = "muzeum"
   database_version    = "POSTGRES_16"
@@ -125,6 +142,13 @@ resource "google_storage_bucket_iam_member" "audio" {
 resource "google_storage_bucket_iam_member" "data" {
   for_each = toset(var.members)
   bucket   = google_storage_bucket.data.name
+  role     = "roles/storage.objectAdmin"
+  member   = "user:${each.value}"
+}
+
+resource "google_storage_bucket_iam_member" "media" {
+  for_each = toset(var.members)
+  bucket   = google_storage_bucket.media.name
   role     = "roles/storage.objectAdmin"
   member   = "user:${each.value}"
 }
