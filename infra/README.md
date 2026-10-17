@@ -37,12 +37,11 @@ later image changes.
 Each deploy starts a new revision without traffic, checks its `/api/health/` (database), and only then
 moves traffic to it. A red deploy leaves the previous revision serving.
 
-Secrets are created by the owner, never in Terraform or in the repo. Create both **before** the first apply of
-`infra/backend.tf`, or the apply stops halfway (rerun it after creating them). If the first apply fails with
+The Django secret key is created by the owner, never in Terraform or in the repo. Create it **before** the first apply of
+`infra/backend.tf`, or the apply stops halfway (rerun it after creating it). If the first apply fails with
 "Permission denied on secret", IAM has not propagated yet: rerun the Infra job once.
 
 ```bash
-printf %s "$ZTM_API_KEY" | gcloud secrets create ztm-api-key --project muzeum-w-autobusie-2026 --data-file=-
 python3 -c "import secrets; print(secrets.token_urlsafe(50), end='')" | gcloud secrets create django-secret-key --project muzeum-w-autobusie-2026 --data-file=-
 ```
 

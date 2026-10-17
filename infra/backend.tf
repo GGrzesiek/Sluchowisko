@@ -2,8 +2,7 @@ locals {
   backend_image_repository = "${var.region}-docker.pkg.dev/${var.project_id}/${google_artifact_registry_repository.backend.repository_id}"
   api_db_user              = trimsuffix(google_service_account.api.email, ".gserviceaccount.com")
   backend_secrets = {
-    ZTM_API_KEY = "ztm-api-key"
-    SECRET_KEY  = "django-secret-key"
+    SECRET_KEY = "django-secret-key"
   }
 }
 
