@@ -84,7 +84,7 @@ class StoryApiTest(TestCase):
     def test_frontend_sees_only_verified(self):
         self.agent.put("/api/stories/7001/", story_payload(), format="json")
         self.assertEqual(self.client.get("/api/stories/7001/").status_code, 404)
-        self.assertEqual(self.client.get("/api/stories/7001/?draft=1").status_code, 200)
+        self.assertEqual(self.agent.get("/api/stories/7001/?draft=1").status_code, 200)
         r = self.agent.patch("/api/stories/7001/", {"status": "verified"}, format="json")
         self.assertEqual(r.status_code, 200, r.content)
         body = self.client.get("/api/stories/7001/").json()
@@ -102,6 +102,22 @@ class StoryApiTest(TestCase):
         groups = self.client.get("/api/lines/99/stories/").json()["stopGroups"]
         self.assertEqual([g["groupId"] for g in groups], ["7001", "7002", "7003"])
         self.assertEqual([g["storyStatus"] for g in groups], [None, "draft", None])
+
+    def test_drafts_need_token(self):
+        self.agent.put("/api/stories/7001/", story_payload(), format="json")
+        self.assertEqual(self.client.get("/api/stories/7001/?draft=1").status_code, 403)
+        self.assertEqual(self.agent.get("/api/stories/7001/?draft=1").status_code, 200)
+
+    def test_line_stories_without_main_route_uses_service_variants(self):
+        line = Line.objects.create(number="117", kind="bus")
+        detour = Route.objects.create(line=line, code="TO-GOC", stop_count=2)
+        depot = Route.objects.create(line=line, code="TD-ZAJ", stop_count=1)
+        alfa, beta, gamma = Stop.objects.order_by("lat")
+        for i, stop in enumerate((alfa, beta)):
+            RouteStop.objects.create(route=detour, order=i + 1, zespol=stop.zespol, slupek=stop.slupek, stop=stop)
+        RouteStop.objects.create(route=depot, order=1, zespol=gamma.zespol, slupek=gamma.slupek, stop=gamma)
+        groups = self.client.get("/api/lines/117/stories/").json()["stopGroups"]
+        self.assertEqual([g["groupId"] for g in groups], ["7001", "7002"])
 
     def test_ride_has_story_only_for_verified(self):
         line = Line.objects.create(number="99", kind="tram")

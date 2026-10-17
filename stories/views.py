@@ -7,8 +7,10 @@ from rest_framework.response import Response
 from transit.models import Line, Route
 
 from .models import Story
-from .permissions import WriteTokenOrReadOnly
+from .permissions import WriteTokenOrReadOnly, has_write_token
 from .serializers import StorySerializer, story_content
+
+DEPOT_ROUTE_PREFIXES = ("TD", "TZ")
 
 
 def _upsert(data, group_id=None):
@@ -48,7 +50,10 @@ def story_list(request):
 def story_detail(request, group_id):
     if request.method == "GET":
         qs = Story.objects.all()
-        if request.query_params.get("draft") != "1":
+        if request.query_params.get("draft") == "1":
+            if not has_write_token(request):
+                return Response(status=status.HTTP_403_FORBIDDEN)
+        else:
             qs = qs.filter(status=Story.Status.VERIFIED)
         return Response(story_content(get_object_or_404(qs, group_id=group_id)))
 
@@ -68,9 +73,11 @@ def story_detail(request, group_id):
 @api_view(["GET"])
 def line_stories(request, number):
     line = get_object_or_404(Line, number=number)
-    routes = Route.objects.filter(line=line).order_by("code")
+    routes = list(Route.objects.filter(line=line).order_by("code"))
     if request.query_params.get("all_routes") != "1":
-        routes = routes.filter(code__startswith="TP")
+        routes = [r for r in routes if r.is_main] or [
+            r for r in routes if not r.code.upper().startswith(DEPOT_ROUTE_PREFIXES)
+        ]
     groups = {}
     for route in routes:
         for rs in route.stops.select_related("stop").order_by("order"):
