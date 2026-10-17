@@ -4,11 +4,21 @@ A deterministic script, without any AI, that gathers everything known about the 
 (zespół przystankowy) and writes it as one JSON file. The stories agent reads that file and writes stories from it.
 
 ```
-python -m collector 5086
+python -m collector 5086                 # one stop group
+python -m collector 5086 5087 5159       # several stop groups
+python -m collector --demo               # all 50 stop groups of the demo lines
+python -m collector --demo --jobs 6      # more stop groups at once (default 4)
 ```
 
-This writes `out/collected/5086.json` and prints its path. From Python: `collect("5086")` returns the same path. The
-file always matches `CollectedStop` in `schema.py`: it is written with `save` and read back with `load`.
+Each stop group gets `out/collected/<group_id>.json`, and the command prints its path. From Python: `collect("5086")`
+returns the same path, and `collect_many(group_ids, jobs)` yields each group id with its path or error as soon as it is
+done. A stop group that fails does not stop the others. Every file matches `CollectedStop` in `schema.py`: it is
+written with `save` and read back with `load`.
+
+Several stop groups are collected at once, but every server still gets one request at a time: while one stop group
+waits for Overpass, another reads Wikipedia. When two stop groups need the same response (a district's flat prices,
+a year of the participatory budget), it is downloaded once. The files are the same as when the stop groups are collected
+one by one. Overpass sets the pace: one query per stop group, often 30 seconds.
 
 ## Setup
 
@@ -93,7 +103,7 @@ python manage.py import_stops
     pins is within 400 m: year, title, distance and cost. Each project is its own source, linked to its page on
     bo.um.warszawa.pl. The names of the people who submitted projects are in the data and are never copied;
   - the 3 trees with the largest trunk girth within 400 m, from the city's tree register (WFS layer
-    `ZIELEN_DRZEWA`): species, girth, height, distance and the year of the record. A tree with several trunks is
+    `ZIELEN_DRZEWA`, one request for the whole square, split only when the server's limit of 1000 trees is reached): species, girth, height, distance and the year of the record. A tree with several trunks is
     ranked by its largest one, and its girth is kept as the register gives it, e.g. `55, 100`.
 
   Data from dane.um.warszawa.pl is not protected by copyright and may be reused without restrictions (portal terms,
@@ -164,9 +174,7 @@ Every response is stored under `cache/<host>/` and reused, so a second run gives
 network. A cached entry keeps the request, the response body and the date it was downloaded. Request headers, and
 with them API keys, are never stored. Delete a file from `cache/` to download it again.
 
-Requests send a `User-Agent` with the project's address, go one at a time with at least a second between requests to
-the same server (10 seconds for www.warszawa1939.pl, as its `robots.txt` asks), and retry a busy server (HTTP 429, 502, 503, 504) after 10, 30 and 90 seconds. Overpass has two
-servers; whichever answers first is cached.
+Requests send a `User-Agent` with the project's address and go one at a time. Wikipedia, Wikidata, Wikimedia Commons and Warszawikia get the next request as soon as the previous one is answered, as their API guidelines allow; other servers get at least a second between requests, and www.warszawa1939.pl 10 seconds, as its `robots.txt` asks. A busy server (HTTP 429, 502, 503, 504) is retried after 10, 30 and 90 seconds. Overpass has two servers; whichever answers first is cached.
 
 ## Sources
 

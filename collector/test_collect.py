@@ -1,11 +1,14 @@
 import json
+import threading
+import time as clock
+from concurrent.futures import ThreadPoolExecutor
 
 import pytest
 import requests
 
 from collector import cache, city, commons, images, osm, warszawikia, web, wikidata, wikipedia
 from collector.check import check
-from collector.collect import collect
+from collector.collect import collect, collect_many, demo_groups
 from collector.geo import distance_m, distance_to_line_m
 from collector.html_text import to_text
 from collector.pl2000 import from_pl2000, to_pl2000
@@ -778,3 +781,106 @@ def test_a_redirected_wikidata_item_is_cached_under_its_final_id(fake_web):
     assert sources[0].url == "https://www.wikidata.org/wiki/Q100"
     with cache.offline():
         assert wikidata.check_values(sources[0].url, fragments[0].template, fragments[0].values) is None
+
+
+def test_requests_wait_between_calls_to_the_same_server_only_where_it_asks_for_it(monkeypatch):
+    clock = [100.0]
+    waits = []
+    monkeypatch.setattr(cache.time, "monotonic", lambda: clock[0])
+    monkeypatch.setattr(cache.time, "sleep", waits.append)
+    monkeypatch.setattr(cache, "_last_request_at", {})
+
+    for host in ("pl.wikipedia.org", "pl.wikipedia.org", "overpass-api.de", "overpass-api.de", "www.warszawa1939.pl"):
+        cache._respect_interval(host)
+    cache._respect_interval("www.warszawa1939.pl")
+
+    assert waits == [1.0, 10.0]
+
+
+def test_each_server_gets_one_request_at_a_time_while_different_servers_work_together(cache_dir, monkeypatch):
+    active: dict[str, int] = {}
+    most: dict[str, int] = {}
+    overlapping = []
+    guard = threading.Lock()
+
+    def request(method, url, **kwargs):
+        host = url.split("/")[2]
+        with guard:
+            active[host] = active.get(host, 0) + 1
+            most[host] = max(most.get(host, 0), active[host])
+            overlapping.append(sum(active.values()))
+        clock.sleep(0.05)
+        with guard:
+            active[host] -= 1
+        return FakeResponse(200, "{}")
+
+    monkeypatch.setattr(requests, "request", request)
+    urls = [f"https://{host}/api/{n}" for n in range(4) for host in ("a.example", "b.example")]
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        list(pool.map(lambda url: cache.fetch("GET", url), urls))
+
+    assert most == {"a.example": 1, "b.example": 1}
+    assert max(overlapping) == 2
+
+
+def test_the_same_request_from_two_stops_is_downloaded_once(cache_dir, monkeypatch):
+    calls = []
+
+    def request(method, url, **kwargs):
+        calls.append(url)
+        clock.sleep(0.05)
+        return FakeResponse(200, '{"rok": 2025}')
+
+    monkeypatch.setattr(requests, "request", request)
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        results = list(
+            pool.map(lambda _: cache.fetch("POST", "https://example.org/rcn", json_body={"rok": 2025}), range(4))
+        )
+
+    assert len(calls) == 1
+    assert {result.body for result in results} == {'{"rok": 2025}'}
+
+
+def test_one_stop_checking_offline_does_not_stop_another_from_downloading(cache_dir, monkeypatch):
+    monkeypatch.setattr(requests, "request", lambda method, url, **kwargs: FakeResponse(200, "{}"))
+    checking = threading.Event()
+    downloaded = threading.Event()
+
+    def check_offline():
+        with cache.offline():
+            checking.set()
+            downloaded.wait(timeout=5)
+            with pytest.raises(cache.FetchError, match="not in the cache"):
+                cache.fetch("GET", "https://example.org/never-downloaded")
+
+    def download():
+        checking.wait(timeout=5)
+        cache.fetch("GET", "https://example.org/new")
+        downloaded.set()
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        for future in [pool.submit(check_offline), pool.submit(download)]:
+            future.result()
+
+
+def test_several_stops_at_once_give_the_same_files_as_one_by_one(stop_rows, fake_web, tmp_path):
+    together = dict(collect_many(["5086", "5087"], jobs=2, root=tmp_path / "together", images_root=tmp_path / "i1"))
+    alone = {group_id: collect(group_id, root=tmp_path / "alone", images_root=tmp_path / "i2") for group_id in together}
+
+    assert sorted(together) == ["5086", "5087"]
+    for group_id, path in together.items():
+        assert path.read_text(encoding="utf-8") == alone[group_id].read_text(encoding="utf-8")
+
+
+def test_a_failed_stop_does_not_stop_the_others(stop_rows, fake_web, tmp_path):
+    results = dict(collect_many(["9999", "5086"], jobs=2, root=tmp_path, images_root=tmp_path / "images"))
+
+    assert isinstance(results["9999"], UnknownStopGroup)
+    assert results["5086"] == tmp_path / "5086.json"
+
+
+def test_demo_groups_are_the_fifty_stop_groups_of_the_demo_lines():
+    groups = demo_groups()
+
+    assert len(groups) == len(set(groups)) == 50
+    assert groups[:3] == ["5159", "5087", "5086"]

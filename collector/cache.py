@@ -1,8 +1,10 @@
 import hashlib
 import json
+import threading
 import time
 from collections.abc import Iterator
 from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
@@ -18,13 +20,23 @@ load_dotenv(REPO_ROOT / ".env")
 USER_AGENT = "MuzeumWAutobusie/0.1 (https://github.com/GGrzesiek/opendatahackathon42)"
 CACHE_DIR = REPO_ROOT / "cache"
 MIN_INTERVAL_S = 1.0
-HOST_INTERVALS_S = {"www.warszawa1939.pl": 10.0}
+HOST_INTERVALS_S = {
+    "pl.wikipedia.org": 0.0,
+    "www.wikidata.org": 0.0,
+    "commons.wikimedia.org": 0.0,
+    "upload.wikimedia.org": 0.0,
+    "thumb.wikimedia.org": 0.0,
+    "warszawa.fandom.com": 0.0,
+    "www.warszawa1939.pl": 10.0,
+}
 RETRY_STATUSES = {429, 502, 503, 504}
 RETRY_WAITS_S = (10, 30, 90)
 TIMEOUT_S = 120
 
 _last_request_at: dict[str, float] = {}
-_offline = False
+_offline: ContextVar[bool] = ContextVar("offline", default=False)
+_locks: dict[str, threading.Lock] = {}
+_locks_guard = threading.Lock()
 
 
 class FetchError(RuntimeError):
@@ -33,12 +45,16 @@ class FetchError(RuntimeError):
 
 @contextmanager
 def offline() -> Iterator[None]:
-    global _offline
-    previous, _offline = _offline, True
+    token = _offline.set(True)
     try:
         yield
     finally:
-        _offline = previous
+        _offline.reset(token)
+
+
+def _lock(name: str) -> threading.Lock:
+    with _locks_guard:
+        return _locks.setdefault(name, threading.Lock())
 
 
 @dataclass(frozen=True)
@@ -87,37 +103,44 @@ def fetch(
     if stored:
         return stored
 
-    if _offline:
-        raise FetchError(f"{method} {url}: not in the cache")
     request = describe(method, url, params, form, json_body)
     path = cache_path(request)
-    response = _download(request, headers or {})
-    charset_given = "charset" in response.headers.get("Content-Type", "").lower()
-    body = response.content.decode(response.encoding if charset_given else "utf-8")
-    retrieved_at = date.today()
-    stored = {**request, "retrieved_at": retrieved_at.isoformat(), "body": body}
-    path.parent.mkdir(parents=True, exist_ok=True)
-    partial = path.with_suffix(".part")
-    partial.write_text(json.dumps(stored, ensure_ascii=False), encoding="utf-8")
-    partial.replace(path)
-    return Cached(body, retrieved_at)
+    with _lock(str(path)):
+        stored = lookup(method, url, params=params, form=form, json_body=json_body)
+        if stored:
+            return stored
+        if _offline.get():
+            raise FetchError(f"{method} {url}: not in the cache")
+        response = _download(request, headers or {})
+        charset_given = "charset" in response.headers.get("Content-Type", "").lower()
+        body = response.content.decode(response.encoding if charset_given else "utf-8")
+        retrieved_at = date.today()
+        stored = {**request, "retrieved_at": retrieved_at.isoformat(), "body": body}
+        path.parent.mkdir(parents=True, exist_ok=True)
+        partial = path.with_suffix(".part")
+        partial.write_text(json.dumps(stored, ensure_ascii=False), encoding="utf-8")
+        partial.replace(path)
+        return Cached(body, retrieved_at)
 
 
 def fetch_image(url: str, *, params: dict | None = None) -> bytes:
     path = cache_path(describe("GET", url, params, None, None)).with_suffix(".bin")
     if path.exists():
         return path.read_bytes()
-    if _offline:
-        raise FetchError(f"GET {url}: not in the cache")
-    response = _download(describe("GET", url, params, None, None), {})
-    content_type = response.headers.get("Content-Type", "")
-    if not content_type.startswith("image/"):
-        raise FetchError(f"GET {url}: expected an image, got {content_type} {response.content[:200]!r}")
-    path.parent.mkdir(parents=True, exist_ok=True)
-    partial = path.with_suffix(".part")
-    partial.write_bytes(response.content)
-    partial.replace(path)
-    return response.content
+    with _lock(str(path)):
+        if path.exists():
+            return path.read_bytes()
+        if _offline.get():
+            raise FetchError(f"GET {url}: not in the cache")
+        response = _download(describe("GET", url, params, None, None), {})
+        content_type = response.headers.get("Content-Type", "")
+        if not content_type.startswith("image/"):
+            raise FetchError(f"GET {url}: expected an image, got {content_type} {response.content[:200]!r}")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        partial = path.with_suffix(".part")
+        partial.write_bytes(response.content)
+        partial.replace(path)
+        return response.content
 
 
 def _download(request: dict, headers: dict) -> requests.Response:
@@ -125,17 +148,18 @@ def _download(request: dict, headers: dict) -> requests.Response:
     host = urlsplit(url).hostname
     for attempt, wait in enumerate((0, *RETRY_WAITS_S)):
         time.sleep(wait)
-        _respect_interval(host)
         try:
-            response = requests.request(
-                method,
-                url,
-                params=request["params"] or None,
-                data=request["form"] or None,
-                json=request["json"],
-                headers={"User-Agent": USER_AGENT, **headers},
-                timeout=TIMEOUT_S,
-            )
+            with _lock(f"host:{host}"):
+                _respect_interval(host)
+                response = requests.request(
+                    method,
+                    url,
+                    params=request["params"] or None,
+                    data=request["form"] or None,
+                    json=request["json"],
+                    headers={"User-Agent": USER_AGENT, **headers},
+                    timeout=TIMEOUT_S,
+                )
         except requests.RequestException as error:
             if attempt == len(RETRY_WAITS_S):
                 raise FetchError(f"{method} {url}: {error}") from error

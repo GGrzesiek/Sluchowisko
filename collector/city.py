@@ -20,7 +20,6 @@ WFS = "https://wfs.um.warszawa.pl/serwis"
 WFS_CAPABILITIES = f"{WFS}?SERVICE=WFS&REQUEST=GetCapabilities"
 WFS_LICENSE = "Usługa WFS m.st. Warszawy: AccessConstraints „none”"
 WFS_MAX_FEATURES = 1000
-TILE_M = 200
 RCN_YEAR = 2025
 RCN_MARKETS = ("rynekPierwotny", "rynekWtorny")
 MIN_TRANSACTIONS = 5
@@ -195,17 +194,13 @@ def largest_trees(stop: Stop) -> list[Fact]:
     north, east = to_pl2000(stop.lat, stop.lon)
     trees: dict[str, tuple[dict[str, str], int]] = {}
     retrieved: list[date] = []
-    steps = range(-RADIUS_M, RADIUS_M, TILE_M)
-    for dn in steps:
-        for de in steps:
-            for fields, retrieved_at in _tile(
-                "ns92528565:ZIELEN_DRZEWA", (east + de, east + de + TILE_M), (north + dn, north + dn + TILE_M)
-            ):
-                retrieved.append(retrieved_at)
-                tree_east, tree_north = (float(value) for value in fields["pos"].split())
-                distance = distance_m(stop.lat, stop.lon, *from_pl2000(tree_north, tree_east))
-                if distance <= RADIUS_M and _complete(fields):
-                    trees[fields["OBJECTID"]] = (fields, distance)
+    square = ((east - RADIUS_M, east + RADIUS_M), (north - RADIUS_M, north + RADIUS_M))
+    for fields, retrieved_at in _tile("ns92528565:ZIELEN_DRZEWA", *square):
+        retrieved.append(retrieved_at)
+        tree_east, tree_north = (float(value) for value in fields["pos"].split())
+        distance = distance_m(stop.lat, stop.lon, *from_pl2000(tree_north, tree_east))
+        if distance <= RADIUS_M and _complete(fields):
+            trees[fields["OBJECTID"]] = (fields, distance)
 
     largest = sorted(trees.values(), key=lambda tree: (-_girth(tree[0]), int(tree[0]["OBJECTID"])))
     return [
