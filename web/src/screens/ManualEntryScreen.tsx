@@ -35,7 +35,7 @@ export function ManualEntryScreen({ onBack, onSubmit }: ManualEntryScreenProps) 
         <h1 className="m-0 text-[32px] font-extrabold leading-[1.08] tracking-[-0.02em]">
           Którym autobusem lub tramwajem jedziesz?
         </h1>
-        <VehicleInput value={value} onChange={(v) => setValue(sanitizeVehicleNumber(v))} />
+        <VehicleInput value={value} onChange={(v) => setValue(sanitizeVehicleNumber(v))} autoFocus />
       </div>
       <Button
         type="submit"

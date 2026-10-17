@@ -90,7 +90,15 @@ export function AppLogo({ name = "Linia Czasu" }: { name?: string }) {
   );
 }
 
-export function VehicleInput({ value, onChange }: { value: string; onChange?: (v: string) => void }) {
+export function VehicleInput({
+  value,
+  onChange,
+  autoFocus,
+}: {
+  value: string;
+  onChange?: (v: string) => void;
+  autoFocus?: boolean;
+}) {
   return (
     <div className="flex flex-col gap-2">
       <label htmlFor="vehicle-number" className="text-[15px] font-bold">
@@ -101,6 +109,7 @@ export function VehicleInput({ value, onChange }: { value: string; onChange?: (v
         inputMode="numeric"
         autoComplete="off"
         maxLength={4}
+        autoFocus={autoFocus}
         aria-describedby="vehicle-number-hint"
         placeholder="np. 1234"
         value={value}

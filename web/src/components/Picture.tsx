@@ -94,12 +94,12 @@ export function PhotoCredit({ text, overlay = true }: { text: string; overlay?: 
   );
 }
 
-export function PhotoDots({ count, index }: { count: number; index: number }) {
+export function PhotoDots({ count, index, className }: { count: number; index: number; className?: string }) {
   return (
     <div
       role="img"
       aria-label={`Zdjęcie ${index + 1} z ${count}`}
-      className="absolute inset-x-0 bottom-[34px] flex justify-center gap-1.5"
+      className={cx("absolute inset-x-0 flex justify-center gap-1.5", className ?? "bottom-[34px]")}
     >
       {Array.from({ length: count }, (_, i) => (
         <span key={i} className={cx("h-1.5 rounded-full", i === index ? "w-[18px] bg-cream" : "w-1.5 bg-cream/60")} />

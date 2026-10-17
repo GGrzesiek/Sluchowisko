@@ -34,7 +34,7 @@ import {
   STORY_ICON_LABELS,
 } from "./components";
 import { PALETTE_DEFAULTS, applyTheme, resetTheme, type PaletteKey } from "./theme";
-import { SCREENS, findScreen, screenHash } from "./screens/registry";
+import { SCREENS, findScreen, screenHash, screenHref } from "./screens/registry";
 import type { RouteStop, StoryIconKind } from "./types";
 
 const STOPS: RouteStop[] = [
@@ -71,9 +71,9 @@ function ScreenIndex() {
       <ul className="m-0 grid list-none gap-3 p-0 sm:grid-cols-2 lg:grid-cols-3">
         {SCREENS.map((screen) => (
           <li key={screen.id}>
-            {screen.render ? (
+            {screen.render || screen.href ? (
               <a
-                href={screenHash(screen.id)}
+                href={screenHref(screen)}
                 className="flex items-center gap-3 rounded-2xl bg-cream p-3.5 text-charcoal no-underline"
               >
                 <ScreenNumber>{screen.number}</ScreenNumber>
@@ -141,11 +141,17 @@ function goHome() {
   window.location.hash = "";
 }
 
+function goToNext(id: string) {
+  const index = SCREENS.findIndex((s) => s.id === id);
+  const next = SCREENS.slice(index + 1).find((s) => s.render);
+  window.location.hash = next ? screenHash(next.id) : "";
+}
+
 export function App() {
   const hash = useHashRoute();
   const screen = findScreen(hash);
   if (screen?.render) {
-    return screen.render({ back: goHome, next: goHome });
+    return screen.render({ back: goHome, next: () => goToNext(screen.id) });
   }
   return <Showcase />;
 }
@@ -165,7 +171,7 @@ function Showcase() {
   return (
     <main className="min-h-screen bg-puff p-4 text-charcoal sm:p-10">
       <div className="mx-auto flex max-w-6xl flex-col gap-6">
-        <h1 className="m-0 text-3xl font-extrabold">Muzeum w autobusie · komponenty</h1>
+        <h1 className="m-0 text-3xl font-extrabold">Muzeum w autobusie · debug</h1>
         <ScreenIndex />
         <PaletteEditor />
         <div className="grid gap-6 lg:grid-cols-3">

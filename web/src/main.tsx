@@ -1,10 +1,13 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
-import { App } from "./App";
+import { ErrorStatusProvider } from "./ErrorStatus";
+import { ScreenSwitcher } from "./ScreenSwitcher";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <App />
+    <ErrorStatusProvider>
+      <ScreenSwitcher />
+    </ErrorStatusProvider>
   </StrictMode>,
 );

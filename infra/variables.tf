@@ -13,6 +13,11 @@ variable "ci_service_account" {
   default = "tf-apply@muzeum-w-autobusie-2026.iam.gserviceaccount.com"
 }
 
+variable "team_group" {
+  type    = string
+  default = "sluchowisko@googlegroups.com"
+}
+
 variable "members" {
   type = list(string)
 }

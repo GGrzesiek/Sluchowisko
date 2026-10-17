@@ -1,0 +1,984 @@
+{
+  "source": "WTP timetables (wtp.waw.pl, route view, variant 0), checked 2026-10-17; group ids match get_ztm_przystanki_komunikacji_miejskiej",
+  "issue": 1,
+  "lines": [
+    {
+      "line": "22",
+      "mode": "tram",
+      "area": "Wola",
+      "segment": {
+        "from": "Powązkowska",
+        "to": "Pl. Starynkiewicza"
+      },
+      "termini": ["Piaski", "Wiatraczna"],
+      "directions": [
+        {
+          "from": "Powązkowska",
+          "to": "Pl. Starynkiewicza",
+          "stops": [
+            {
+              "group_id": "5159",
+              "pole": "04",
+              "name": "Powązkowska",
+              "minutes": 0
+            },
+            {
+              "group_id": "5087",
+              "pole": "03",
+              "name": "Niska",
+              "minutes": 1
+            },
+            {
+              "group_id": "5086",
+              "pole": "03",
+              "name": "Cm. Żydowski",
+              "minutes": 2
+            },
+            {
+              "group_id": "5084",
+              "pole": "01",
+              "name": "Żytnia",
+              "minutes": 3
+            },
+            {
+              "group_id": "5003",
+              "pole": "07",
+              "name": "Okopowa",
+              "minutes": 6
+            },
+            {
+              "group_id": "5037",
+              "pole": "05",
+              "name": "Muzeum Powstania Warszawskiego",
+              "minutes": 7
+            },
+            {
+              "group_id": "5040",
+              "pole": "05",
+              "name": "Rondo Daszyńskiego",
+              "minutes": 8
+            },
+            {
+              "group_id": "4001",
+              "pole": "13",
+              "name": "Pl. Zawiszy",
+              "minutes": 10
+            },
+            {
+              "group_id": "4001",
+              "pole": "05",
+              "name": "Pl. Zawiszy",
+              "minutes": 12
+            },
+            {
+              "group_id": "4052",
+              "pole": "03",
+              "name": "Pl. Starynkiewicza",
+              "minutes": 13
+            }
+          ]
+        },
+        {
+          "from": "Pl. Starynkiewicza",
+          "to": "Powązkowska",
+          "stops": [
+            {
+              "group_id": "4052",
+              "pole": "04",
+              "name": "Pl. Starynkiewicza",
+              "minutes": 0
+            },
+            {
+              "group_id": "4001",
+              "pole": "08",
+              "name": "Pl. Zawiszy",
+              "minutes": 2
+            },
+            {
+              "group_id": "4001",
+              "pole": "14",
+              "name": "Pl. Zawiszy",
+              "minutes": 4
+            },
+            {
+              "group_id": "5040",
+              "pole": "06",
+              "name": "Rondo Daszyńskiego",
+              "minutes": 6
+            },
+            {
+              "group_id": "5037",
+              "pole": "06",
+              "name": "Muzeum Powstania Warszawskiego",
+              "minutes": 7
+            },
+            {
+              "group_id": "5003",
+              "pole": "08",
+              "name": "Okopowa",
+              "minutes": 10
+            },
+            {
+              "group_id": "5084",
+              "pole": "02",
+              "name": "Żytnia",
+              "minutes": 11
+            },
+            {
+              "group_id": "5085",
+              "pole": "02",
+              "name": "Dzielna",
+              "minutes": 12
+            },
+            {
+              "group_id": "5086",
+              "pole": "04",
+              "name": "Cm. Żydowski",
+              "minutes": 13
+            },
+            {
+              "group_id": "5087",
+              "pole": "04",
+              "name": "Niska",
+              "minutes": 14
+            },
+            {
+              "group_id": "5159",
+              "pole": "03",
+              "name": "Powązkowska",
+              "minutes": 15
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "line": "18",
+      "mode": "tram",
+      "area": "Mokotów (Górny Mokotów, Służewiec)",
+      "segment": {
+        "from": "Królikarnia",
+        "to": "Wynalazek"
+      },
+      "termini": ["Żerań FSO", "PKP Służewiec"],
+      "directions": [
+        {
+          "from": "Królikarnia",
+          "to": "Wynalazek",
+          "stops": [
+            {
+              "group_id": "3007",
+              "pole": "03",
+              "name": "Królikarnia",
+              "minutes": 0
+            },
+            {
+              "group_id": "3007",
+              "pole": "06",
+              "name": "Królikarnia",
+              "minutes": 1
+            },
+            {
+              "group_id": "3114",
+              "pole": "04",
+              "name": "Metro Wierzbno",
+              "minutes": 3
+            },
+            {
+              "group_id": "3115",
+              "pole": "04",
+              "name": "Telewizja Polska",
+              "minutes": 4
+            },
+            {
+              "group_id": "3116",
+              "pole": "04",
+              "name": "Samochodowa",
+              "minutes": 5
+            },
+            {
+              "group_id": "3240",
+              "pole": "03",
+              "name": "Woronicza",
+              "minutes": 7
+            },
+            {
+              "group_id": "3241",
+              "pole": "03",
+              "name": "Konstruktorska",
+              "minutes": 8
+            },
+            {
+              "group_id": "3242",
+              "pole": "03",
+              "name": "Domaniewska",
+              "minutes": 9
+            },
+            {
+              "group_id": "3243",
+              "pole": "04",
+              "name": "Rondo Unii Europejskiej",
+              "minutes": 11
+            },
+            {
+              "group_id": "3250",
+              "pole": "04",
+              "name": "Postępu",
+              "minutes": 12
+            },
+            {
+              "group_id": "3251",
+              "pole": "02",
+              "name": "Wynalazek",
+              "minutes": 13
+            }
+          ]
+        },
+        {
+          "from": "Wynalazek",
+          "to": "Królikarnia",
+          "stops": [
+            {
+              "group_id": "3251",
+              "pole": "01",
+              "name": "Wynalazek",
+              "minutes": 0
+            },
+            {
+              "group_id": "3250",
+              "pole": "03",
+              "name": "Postępu",
+              "minutes": 1
+            },
+            {
+              "group_id": "3243",
+              "pole": "03",
+              "name": "Rondo Unii Europejskiej",
+              "minutes": 2
+            },
+            {
+              "group_id": "3242",
+              "pole": "04",
+              "name": "Domaniewska",
+              "minutes": 4
+            },
+            {
+              "group_id": "3241",
+              "pole": "04",
+              "name": "Konstruktorska",
+              "minutes": 5
+            },
+            {
+              "group_id": "3240",
+              "pole": "07",
+              "name": "Woronicza",
+              "minutes": 7
+            },
+            {
+              "group_id": "3116",
+              "pole": "03",
+              "name": "Samochodowa",
+              "minutes": 8
+            },
+            {
+              "group_id": "3115",
+              "pole": "03",
+              "name": "Telewizja Polska",
+              "minutes": 9
+            },
+            {
+              "group_id": "3114",
+              "pole": "03",
+              "name": "Metro Wierzbno",
+              "minutes": 11
+            },
+            {
+              "group_id": "3007",
+              "pole": "05",
+              "name": "Królikarnia",
+              "minutes": 13
+            },
+            {
+              "group_id": "3007",
+              "pole": "04",
+              "name": "Królikarnia",
+              "minutes": 14
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "line": "179",
+      "mode": "bus",
+      "area": "Ursynów (Natolin, Imielin)",
+      "segment": {
+        "from": "Metro Natolin",
+        "to": "Miklaszewskiego"
+      },
+      "termini": ["Os. Kabaty", "Ursynów Płn."],
+      "directions": [
+        {
+          "from": "Metro Natolin",
+          "to": "Miklaszewskiego",
+          "stops": [
+            {
+              "group_id": "3281",
+              "pole": "01",
+              "name": "Metro Natolin",
+              "minutes": 0
+            },
+            {
+              "group_id": "3146",
+              "pole": "01",
+              "name": "Lanciego",
+              "minutes": 1
+            },
+            {
+              "group_id": "3200",
+              "pole": "02",
+              "name": "Belgradzka",
+              "minutes": 2
+            },
+            {
+              "group_id": "3190",
+              "pole": "02",
+              "name": "Mandarynki",
+              "minutes": 3
+            },
+            {
+              "group_id": "3208",
+              "pole": "02",
+              "name": "Płaskowickiej",
+              "minutes": 5
+            },
+            {
+              "group_id": "3207",
+              "pole": "02",
+              "name": "Grzegorzewskiej",
+              "minutes": 6
+            },
+            {
+              "group_id": "3122",
+              "pole": "01",
+              "name": "Teligi",
+              "minutes": 8
+            },
+            {
+              "group_id": "3138",
+              "pole": "04",
+              "name": "Polinezyjska",
+              "minutes": 9
+            },
+            {
+              "group_id": "3280",
+              "pole": "02",
+              "name": "Metro Imielin",
+              "minutes": 10
+            },
+            {
+              "group_id": "3139",
+              "pole": "04",
+              "name": "Miklaszewskiego",
+              "minutes": 11
+            }
+          ]
+        },
+        {
+          "from": "Miklaszewskiego",
+          "to": "Metro Natolin",
+          "stops": [
+            {
+              "group_id": "3139",
+              "pole": "03",
+              "name": "Miklaszewskiego",
+              "minutes": 0
+            },
+            {
+              "group_id": "3280",
+              "pole": "01",
+              "name": "Metro Imielin",
+              "minutes": 1
+            },
+            {
+              "group_id": "3138",
+              "pole": "03",
+              "name": "Polinezyjska",
+              "minutes": 2
+            },
+            {
+              "group_id": "3122",
+              "pole": "03",
+              "name": "Teligi",
+              "minutes": 4
+            },
+            {
+              "group_id": "3207",
+              "pole": "01",
+              "name": "Grzegorzewskiej",
+              "minutes": 5
+            },
+            {
+              "group_id": "3208",
+              "pole": "01",
+              "name": "Płaskowickiej",
+              "minutes": 7
+            },
+            {
+              "group_id": "3190",
+              "pole": "01",
+              "name": "Mandarynki",
+              "minutes": 8
+            },
+            {
+              "group_id": "3200",
+              "pole": "04",
+              "name": "Belgradzka",
+              "minutes": 9
+            },
+            {
+              "group_id": "3146",
+              "pole": "02",
+              "name": "Lanciego",
+              "minutes": 10
+            },
+            {
+              "group_id": "3281",
+              "pole": "02",
+              "name": "Metro Natolin",
+              "minutes": 11
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "line": "169",
+      "mode": "bus",
+      "area": "Praga-Północ",
+      "segment": {
+        "from": "Dw. Wschodni (Kijowska)",
+        "to": "Rondo Żaba"
+      },
+      "termini": ["Dw. Wschodni (Kijowska)", "Bródno-Podgrodzie"],
+      "directions": [
+        {
+          "from": "Dw. Wschodni (Kijowska)",
+          "to": "Rondo Żaba",
+          "stops": [
+            {
+              "group_id": "1028",
+              "pole": "07",
+              "name": "Dw. Wschodni (Kijowska)",
+              "minutes": 0
+            },
+            {
+              "group_id": "1028",
+              "pole": "11",
+              "name": "Dw. Wschodni (Kijowska)",
+              "minutes": 2
+            },
+            {
+              "group_id": "1001",
+              "pole": "07",
+              "name": "Kijowska",
+              "minutes": 3
+            },
+            {
+              "group_id": "1002",
+              "pole": "02",
+              "name": "Ząbkowska",
+              "minutes": 4
+            },
+            {
+              "group_id": "1003",
+              "pole": "02",
+              "name": "Dw. Wileński",
+              "minutes": 6
+            },
+            {
+              "group_id": "1066",
+              "pole": "02",
+              "name": "Inżynierska",
+              "minutes": 7
+            },
+            {
+              "group_id": "1509",
+              "pole": "02",
+              "name": "Strzelecka",
+              "minutes": 7
+            },
+            {
+              "group_id": "1071",
+              "pole": "02",
+              "name": "Bródnowska",
+              "minutes": 8
+            },
+            {
+              "group_id": "1077",
+              "pole": "02",
+              "name": "Rondo Żaba",
+              "minutes": 10
+            }
+          ]
+        },
+        {
+          "from": "Rondo Żaba",
+          "to": "Dw. Wschodni (Kijowska)",
+          "stops": [
+            {
+              "group_id": "1077",
+              "pole": "01",
+              "name": "Rondo Żaba",
+              "minutes": 0
+            },
+            {
+              "group_id": "1076",
+              "pole": "01",
+              "name": "11 Listopada",
+              "minutes": 2
+            },
+            {
+              "group_id": "1071",
+              "pole": "01",
+              "name": "Bródnowska",
+              "minutes": 3
+            },
+            {
+              "group_id": "1072",
+              "pole": "01",
+              "name": "Harnasie",
+              "minutes": 4
+            },
+            {
+              "group_id": "1066",
+              "pole": "01",
+              "name": "Inżynierska",
+              "minutes": 5
+            },
+            {
+              "group_id": "1003",
+              "pole": "01",
+              "name": "Dw. Wileński",
+              "minutes": 8
+            },
+            {
+              "group_id": "1002",
+              "pole": "01",
+              "name": "Ząbkowska",
+              "minutes": 9
+            },
+            {
+              "group_id": "1001",
+              "pole": "08",
+              "name": "Kijowska",
+              "minutes": 11
+            },
+            {
+              "group_id": "1028",
+              "pole": "07",
+              "name": "Dw. Wschodni (Kijowska)",
+              "minutes": 12
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "line": "117",
+      "mode": "bus",
+      "area": "Praga-Południe (Saska Kępa, Gocław)",
+      "segment": {
+        "from": "Rondo Waszyngtona",
+        "to": "Os. Jantar"
+      },
+      "termini": ["Dw. Centralny", "Gocław"],
+      "directions": [
+        {
+          "from": "Rondo Waszyngtona",
+          "to": "Os. Jantar",
+          "stops": [
+            {
+              "group_id": "2131",
+              "pole": "02",
+              "name": "Rondo Waszyngtona",
+              "minutes": 0
+            },
+            {
+              "group_id": "2153",
+              "pole": "01",
+              "name": "Francuska",
+              "minutes": 1
+            },
+            {
+              "group_id": "2253",
+              "pole": "01",
+              "name": "Pl. Przymierza",
+              "minutes": 2
+            },
+            {
+              "group_id": "2152",
+              "pole": "01",
+              "name": "Meksykańska",
+              "minutes": 3
+            },
+            {
+              "group_id": "2151",
+              "pole": "01",
+              "name": "Wersalska",
+              "minutes": 3
+            },
+            {
+              "group_id": "2150",
+              "pole": "01",
+              "name": "Ateńska",
+              "minutes": 4
+            },
+            {
+              "group_id": "2143",
+              "pole": "01",
+              "name": "Afrykańska",
+              "minutes": 6
+            },
+            {
+              "group_id": "2144",
+              "pole": "01",
+              "name": "Wał Gocławski",
+              "minutes": 7
+            },
+            {
+              "group_id": "2145",
+              "pole": "04",
+              "name": "Abrahama",
+              "minutes": 8
+            },
+            {
+              "group_id": "2252",
+              "pole": "02",
+              "name": "Os. Jantar",
+              "minutes": 9
+            }
+          ]
+        },
+        {
+          "from": "Os. Jantar",
+          "to": "Rondo Waszyngtona",
+          "stops": [
+            {
+              "group_id": "2252",
+              "pole": "01",
+              "name": "Os. Jantar",
+              "minutes": 0
+            },
+            {
+              "group_id": "2145",
+              "pole": "02",
+              "name": "Abrahama",
+              "minutes": 1
+            },
+            {
+              "group_id": "2144",
+              "pole": "02",
+              "name": "Wał Gocławski",
+              "minutes": 2
+            },
+            {
+              "group_id": "2143",
+              "pole": "02",
+              "name": "Afrykańska",
+              "minutes": 3
+            },
+            {
+              "group_id": "2150",
+              "pole": "02",
+              "name": "Ateńska",
+              "minutes": 4
+            },
+            {
+              "group_id": "2151",
+              "pole": "02",
+              "name": "Wersalska",
+              "minutes": 5
+            },
+            {
+              "group_id": "2152",
+              "pole": "02",
+              "name": "Meksykańska",
+              "minutes": 6
+            },
+            {
+              "group_id": "2253",
+              "pole": "02",
+              "name": "Pl. Przymierza",
+              "minutes": 7
+            },
+            {
+              "group_id": "2153",
+              "pole": "02",
+              "name": "Francuska",
+              "minutes": 8
+            },
+            {
+              "group_id": "2131",
+              "pole": "01",
+              "name": "Rondo Waszyngtona",
+              "minutes": 10
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "stop_groups": [
+    {
+      "group_id": "5086",
+      "name": "Cm. Żydowski",
+      "lines": ["22"]
+    },
+    {
+      "group_id": "5085",
+      "name": "Dzielna",
+      "lines": ["22"]
+    },
+    {
+      "group_id": "5037",
+      "name": "Muzeum Powstania Warszawskiego",
+      "lines": ["22"]
+    },
+    {
+      "group_id": "5087",
+      "name": "Niska",
+      "lines": ["22"]
+    },
+    {
+      "group_id": "5003",
+      "name": "Okopowa",
+      "lines": ["22"]
+    },
+    {
+      "group_id": "4052",
+      "name": "Pl. Starynkiewicza",
+      "lines": ["22"]
+    },
+    {
+      "group_id": "4001",
+      "name": "Pl. Zawiszy",
+      "lines": ["22"]
+    },
+    {
+      "group_id": "5159",
+      "name": "Powązkowska",
+      "lines": ["22"]
+    },
+    {
+      "group_id": "5040",
+      "name": "Rondo Daszyńskiego",
+      "lines": ["22"]
+    },
+    {
+      "group_id": "5084",
+      "name": "Żytnia",
+      "lines": ["22"]
+    },
+    {
+      "group_id": "3242",
+      "name": "Domaniewska",
+      "lines": ["18"]
+    },
+    {
+      "group_id": "3241",
+      "name": "Konstruktorska",
+      "lines": ["18"]
+    },
+    {
+      "group_id": "3007",
+      "name": "Królikarnia",
+      "lines": ["18"]
+    },
+    {
+      "group_id": "3114",
+      "name": "Metro Wierzbno",
+      "lines": ["18"]
+    },
+    {
+      "group_id": "3250",
+      "name": "Postępu",
+      "lines": ["18"]
+    },
+    {
+      "group_id": "3243",
+      "name": "Rondo Unii Europejskiej",
+      "lines": ["18"]
+    },
+    {
+      "group_id": "3116",
+      "name": "Samochodowa",
+      "lines": ["18"]
+    },
+    {
+      "group_id": "3115",
+      "name": "Telewizja Polska",
+      "lines": ["18"]
+    },
+    {
+      "group_id": "3240",
+      "name": "Woronicza",
+      "lines": ["18"]
+    },
+    {
+      "group_id": "3251",
+      "name": "Wynalazek",
+      "lines": ["18"]
+    },
+    {
+      "group_id": "3200",
+      "name": "Belgradzka",
+      "lines": ["179"]
+    },
+    {
+      "group_id": "3207",
+      "name": "Grzegorzewskiej",
+      "lines": ["179"]
+    },
+    {
+      "group_id": "3146",
+      "name": "Lanciego",
+      "lines": ["179"]
+    },
+    {
+      "group_id": "3190",
+      "name": "Mandarynki",
+      "lines": ["179"]
+    },
+    {
+      "group_id": "3280",
+      "name": "Metro Imielin",
+      "lines": ["179"]
+    },
+    {
+      "group_id": "3281",
+      "name": "Metro Natolin",
+      "lines": ["179"]
+    },
+    {
+      "group_id": "3139",
+      "name": "Miklaszewskiego",
+      "lines": ["179"]
+    },
+    {
+      "group_id": "3138",
+      "name": "Polinezyjska",
+      "lines": ["179"]
+    },
+    {
+      "group_id": "3208",
+      "name": "Płaskowickiej",
+      "lines": ["179"]
+    },
+    {
+      "group_id": "3122",
+      "name": "Teligi",
+      "lines": ["179"]
+    },
+    {
+      "group_id": "1076",
+      "name": "11 Listopada",
+      "lines": ["169"]
+    },
+    {
+      "group_id": "1071",
+      "name": "Bródnowska",
+      "lines": ["169"]
+    },
+    {
+      "group_id": "1003",
+      "name": "Dw. Wileński",
+      "lines": ["169"]
+    },
+    {
+      "group_id": "1028",
+      "name": "Dw. Wschodni (Kijowska)",
+      "lines": ["169"]
+    },
+    {
+      "group_id": "1072",
+      "name": "Harnasie",
+      "lines": ["169"]
+    },
+    {
+      "group_id": "1066",
+      "name": "Inżynierska",
+      "lines": ["169"]
+    },
+    {
+      "group_id": "1001",
+      "name": "Kijowska",
+      "lines": ["169"]
+    },
+    {
+      "group_id": "1077",
+      "name": "Rondo Żaba",
+      "lines": ["169"]
+    },
+    {
+      "group_id": "1509",
+      "name": "Strzelecka",
+      "lines": ["169"]
+    },
+    {
+      "group_id": "1002",
+      "name": "Ząbkowska",
+      "lines": ["169"]
+    },
+    {
+      "group_id": "2145",
+      "name": "Abrahama",
+      "lines": ["117"]
+    },
+    {
+      "group_id": "2143",
+      "name": "Afrykańska",
+      "lines": ["117"]
+    },
+    {
+      "group_id": "2150",
+      "name": "Ateńska",
+      "lines": ["117"]
+    },
+    {
+      "group_id": "2153",
+      "name": "Francuska",
+      "lines": ["117"]
+    },
+    {
+      "group_id": "2152",
+      "name": "Meksykańska",
+      "lines": ["117"]
+    },
+    {
+      "group_id": "2252",
+      "name": "Os. Jantar",
+      "lines": ["117"]
+    },
+    {
+      "group_id": "2253",
+      "name": "Pl. Przymierza",
+      "lines": ["117"]
+    },
+    {
+      "group_id": "2131",
+      "name": "Rondo Waszyngtona",
+      "lines": ["117"]
+    },
+    {
+      "group_id": "2144",
+      "name": "Wał Gocławski",
+      "lines": ["117"]
+    },
+    {
+      "group_id": "2151",
+      "name": "Wersalska",
+      "lines": ["117"]
+    }
+  ]
+}
