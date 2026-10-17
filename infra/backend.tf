@@ -2,7 +2,8 @@ locals {
   backend_image_repository = "${var.region}-docker.pkg.dev/${var.project_id}/${google_artifact_registry_repository.backend.repository_id}"
   api_db_user              = trimsuffix(google_service_account.api.email, ".gserviceaccount.com")
   backend_secrets = {
-    SECRET_KEY = "django-secret-key"
+    SECRET_KEY          = "django-secret-key"
+    STORIES_WRITE_TOKEN = "stories-write-token"
   }
 }
 
