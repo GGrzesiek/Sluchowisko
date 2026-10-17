@@ -168,6 +168,25 @@ Requests send a `User-Agent` with the project's address, go one at a time with a
 the same server (10 seconds for www.warszawa1939.pl, as its `robots.txt` asks), and retry a busy server (HTTP 429, 502, 503, 504) after 10, 30 and 90 seconds. Overpass has two
 servers; whichever answers first is cached.
 
+## Shared copy
+
+The stories agent reads the same files the collector wrote, from the bucket `muzeum-w-autobusie-2026-data` (access:
+`infra/README.md`). After a run:
+
+```
+gcloud storage rsync -r out gs://muzeum-w-autobusie-2026-data/out
+gcloud storage rsync -r cache gs://muzeum-w-autobusie-2026-data/cache
+```
+
+To work on the same data elsewhere:
+
+```
+gcloud storage rsync -r gs://muzeum-w-autobusie-2026-data/out out
+gcloud storage rsync -r gs://muzeum-w-autobusie-2026-data/cache cache
+```
+
+With `cache/` downloaded, a rerun works offline and gives identical files.
+
 ## Sources
 
 ✅ collected automatically · 🖐️ by hand or through `fetch_allowed_url`, only for chosen places · ❌ not worth it ·

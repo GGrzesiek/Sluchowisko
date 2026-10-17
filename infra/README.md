@@ -8,6 +8,7 @@ The app never talks to GCP. It still reads only static files (see `AGENTS.md`).
 | Project                   | `muzeum-w-autobusie-2026`, region `europe-central2`        |
 | PostgreSQL 16 (Cloud SQL) | instance `muzeum`, database `muzeum`, IAM login only       |
 | ElevenLabs recordings     | bucket `muzeum-w-autobusie-2026-audio`, private, versioned |
+| Facts collector output    | bucket `muzeum-w-autobusie-2026-data`, private, versioned  |
 | Terraform state           | bucket `muzeum-w-autobusie-2026-tfstate`                   |
 | Backend (Django)          | Cloud Run service `backend`, public HTTPS                  |
 | Owner and billing         | Grzesiek (#5)                                              |
@@ -68,10 +69,10 @@ Without the feeder the API answers `503 {"code": "no_live_data"}`; demo mode in 
 
 ## Who can do what
 
-| Who                                                              | Database                       | Recordings bucket |
-| ---------------------------------------------------------------- | ------------------------------ | ----------------- |
-| Writers: emails in the repo variable `INFRA_MEMBERS`             | read and write, as role `team` | read and write    |
-| Team: members of the Google Group `sluchowisko@googlegroups.com` | read only, as role `readers`   | read only         |
+| Who                                                              | Database                       | Recordings and data buckets |
+| ---------------------------------------------------------------- | ------------------------------ | --------------------------- |
+| Writers: emails in the repo variable `INFRA_MEMBERS`             | read and write, as role `team` | read and write              |
+| Team: members of the Google Group `sluchowisko@googlegroups.com` | read only, as role `readers`   | read only                   |
 
 Data reaches GCP only through the writers. Everyone else reads the same copy.
 
@@ -110,10 +111,12 @@ to `127.0.0.1:5432`, database `muzeum`, user = your email, no password. For Djan
 `DATABASE_URL=postgres://you%40gmail.com@127.0.0.1:5432/muzeum` in `.env` (the `@` in the email becomes `%40`). With
 `DATABASE_URL` empty, Django uses a local SQLite file.
 
-### Downloading recordings
+### Downloading recordings and collected facts
 
 ```
 gcloud storage cp -r gs://muzeum-w-autobusie-2026-audio .
+gcloud storage rsync -r gs://muzeum-w-autobusie-2026-data/out out
+gcloud storage rsync -r gs://muzeum-w-autobusie-2026-data/cache cache
 ```
 
 ## Writing data (writers)
@@ -122,6 +125,8 @@ gcloud storage cp -r gs://muzeum-w-autobusie-2026-audio .
   `readers` automatically; tables created under your own name are not.
 - `gcloud storage cp clip.mp3 gs://muzeum-w-autobusie-2026-audio/<path>` uploads a recording. Overwriting an object
   keeps the old version; `gcloud storage ls -a gs://...` lists them.
+- After a facts collector run, `gcloud storage rsync -r out gs://muzeum-w-autobusie-2026-data/out` and the same for
+  `cache` publish the files the stories agent reads (see `collector/README.md`).
 
 ## Adding or removing people (owner)
 

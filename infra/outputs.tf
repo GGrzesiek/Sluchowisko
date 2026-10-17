@@ -2,6 +2,10 @@ output "audio_bucket" {
   value = google_storage_bucket.audio.name
 }
 
+output "data_bucket" {
+  value = google_storage_bucket.data.name
+}
+
 output "cloudsql_instance" {
   value = google_sql_database_instance.main.connection_name
 }
