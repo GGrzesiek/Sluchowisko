@@ -55,9 +55,8 @@ otwarte źródła ──▶ fakty ze źródłem ──▶ historie ──▶ wer
 | Baza danych    | PostgreSQL 16                                       | Google Cloud SQL                            |
 | Infrastruktura | Terraform, GitHub Actions                           | wdrożenie po każdej zmianie w `development` |
 
-Serwery API m.st. Warszawy nie odpowiadają na zapytania z sieci centrów danych (Google Cloud, GitHub Actions). Dlatego
-pozycje pojazdów zapisuje do bazy skrypt `poll_vehicles` uruchomiony na komputerze w Polsce, a backend w chmurze czyta
-je z bazy.
+Serwery API m.st. Warszawy odpowiadają tylko na zapytania z polskich adresów IP, dlatego backend działa w regionie
+Google Cloud `europe-central2` (Warszawa) i sam pobiera pozycje pojazdów.
 
 ## Uruchomienie u siebie
 
