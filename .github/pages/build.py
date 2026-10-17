@@ -74,7 +74,7 @@ PLACEHOLDER = """<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Muzeum w autobusie</title>
+<title>Słuchowisko</title>
 <style>
   :root {{ --bg:#f7f7f5; --fg:#1a1a1a; --muted:#6b6b6b; }}
   @media (prefers-color-scheme: dark) {{ :root {{ --bg:#141414; --fg:#ececec; --muted:#9a9a9a; }} }}
@@ -85,7 +85,7 @@ PLACEHOLDER = """<!doctype html>
 </head>
 <body>
 <div>
-  <h1>Muzeum w autobusie</h1>
+  <h1>Słuchowisko</h1>
   <p class="muted">Gałąź <code>{branch}</code> nie ma jeszcze katalogu <code>web/</code>.</p>
 </div>
 </body>

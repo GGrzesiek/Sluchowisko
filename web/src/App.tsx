@@ -171,7 +171,7 @@ function Showcase() {
   return (
     <main className="min-h-screen bg-puff p-4 text-charcoal sm:p-10">
       <div className="mx-auto flex max-w-6xl flex-col gap-6">
-        <h1 className="m-0 text-3xl font-extrabold">Muzeum w autobusie · debug</h1>
+        <h1 className="m-0 text-3xl font-extrabold">Słuchowisko · debug</h1>
         <ScreenIndex />
         <PaletteEditor />
         <div className="grid gap-6 lg:grid-cols-3">
