@@ -1,8 +1,10 @@
 import html
+import json
 import os
 import shutil
 import subprocess
 import sys
+from datetime import datetime, timezone
 
 BRANCHES = [("release", ""), ("development", "dev")]
 BASE_PATH = os.environ.get("PAGES_BASE_PATH", "").rstrip("/")
@@ -33,6 +35,23 @@ def placeholder(branch, slug, out_dir):
         f.write(PLACEHOLDER.format(branch=html.escape(branch)))
 
 
+def write_version(branch, slug, out_dir):
+    commit, subject, date = subprocess.run(
+        ["git", "log", "-1", "--format=%H%x00%s%x00%cI", f"origin/{branch}"],
+        check=True, capture_output=True, text=True,
+    ).stdout.strip().split("\0")
+    version = {
+        "branch": branch,
+        "commit": commit,
+        "subject": subject,
+        "committed_at": date,
+        "built_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "run_id": os.environ.get("GITHUB_RUN_ID", ""),
+    }
+    with open(os.path.join(out_dir, slug, "version.json"), "w", encoding="utf-8") as f:
+        json.dump(version, f, indent=2)
+
+
 def main():
     out_dir = sys.argv[1]
     shutil.rmtree(out_dir, ignore_errors=True)
@@ -40,6 +59,7 @@ def main():
     for branch, slug in BRANCHES:
         if not copy_web(branch, slug, out_dir):
             placeholder(branch, slug, out_dir)
+        write_version(branch, slug, out_dir)
     open(os.path.join(out_dir, ".nojekyll"), "w").close()
 
 
