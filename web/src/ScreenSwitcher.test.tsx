@@ -18,7 +18,8 @@ describe("ScreenSwitcher", () => {
   it("opens the loading screen straight from a QR sticker link", () => {
     openAt("/?line=180&vehicle=1234");
     expect(screen.getByRole("heading", { name: "Szukamy Twojego autobusu…" })).toBeInTheDocument();
-    expect(screen.getByText(/Pojazd 1234, linia 180/)).toBeInTheDocument();
+    expect(screen.getByLabelText("Pojazd 1234")).toBeInTheDocument();
+    expect(screen.getByText("Linia 180")).toBeInTheDocument();
   });
 
   it("clears the link when the ride is cancelled", () => {
@@ -40,7 +41,7 @@ describe("ScreenSwitcher", () => {
     fireEvent.change(screen.getByLabelText("Numer boczny pojazdu"), { target: { value: "1234" } });
     fireEvent.click(screen.getByRole("button", { name: "Znajdź mój pojazd" }));
     expect(screen.getByRole("heading", { name: "Szukamy Twojego autobusu…" })).toBeInTheDocument();
-    expect(screen.getByText("Pojazd 1234")).toBeInTheDocument();
+    expect(screen.getByLabelText("Pojazd 1234")).toBeInTheDocument();
   });
 
   it("keeps the gallery screen previews working", () => {
