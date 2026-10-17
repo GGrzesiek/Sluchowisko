@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { flushSync } from "react-dom";
 import { App } from "./App";
+import { FindVehicle, LiveJourney, LiveVehicleFound } from "./liveRide";
 import { screenFromUrl, type Screen } from "./navigation";
 import { ManualEntryScreen } from "./screens/ManualEntryScreen";
-import { FindingVehicleScreen } from "./screens/FindingVehicleScreen";
 import { QrScannerScreen } from "./screens/QrScannerScreen";
+import { RideDeadEndScreen } from "./screens/RideDeadEndScreen";
 import { StartScreen } from "./screens/StartScreen";
 
 export function isDebugPath(pathname: string): boolean {
@@ -52,6 +53,27 @@ function CurrentScreen() {
         />
       );
     case "findingVehicle":
-      return <FindingVehicleScreen ride={screen.ride} onCancel={goToStart} />;
+      return (
+        <FindVehicle
+          ride={screen.ride}
+          onFound={(info) => goTo({ name: "vehicleFound", info })}
+          onDeadEnd={(problem, line) => goTo({ name: "deadEnd", problem, vehicle: screen.ride.vehicle, line })}
+          onCancel={goToStart}
+        />
+      );
+    case "vehicleFound":
+      return <LiveVehicleFound info={screen.info} onStart={(info) => goTo({ name: "journey", info })} />;
+    case "journey":
+      return <LiveJourney info={screen.info} onClose={goToStart} />;
+    case "deadEnd":
+      return (
+        <RideDeadEndScreen
+          problem={screen.problem}
+          vehicle={screen.vehicle}
+          line={screen.line}
+          onEnterAnother={() => goTo({ name: "vehicleNumber" })}
+          onStart={goToStart}
+        />
+      );
   }
 }

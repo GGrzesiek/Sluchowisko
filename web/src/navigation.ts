@@ -1,4 +1,6 @@
+import type { DeadEnd } from "./liveRide";
 import { isValidVehicleNumber } from "./screens/ManualEntryScreen";
+import type { RideInfo } from "./types";
 
 export interface Ride {
   vehicle: string;
@@ -9,7 +11,10 @@ export type Screen =
   | { name: "start" }
   | { name: "vehicleNumber" }
   | { name: "qrScanner" }
-  | { name: "findingVehicle"; ride: Ride };
+  | { name: "findingVehicle"; ride: Ride }
+  | { name: "vehicleFound"; info: RideInfo }
+  | { name: "journey"; info: RideInfo }
+  | { name: "deadEnd"; problem: DeadEnd; vehicle: string; line?: string };
 
 const LINE = /^[0-9A-Z]{1,4}$/;
 

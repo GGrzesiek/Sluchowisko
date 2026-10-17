@@ -102,6 +102,7 @@ class LiveRideStopsTest(TestCase):
         self.assertEqual(first.status_code, 200)
         self.assertEqual(second.status_code, 200)
         self.assertEqual(first.json()["destination"], "Wiatraczna")
+        self.assertEqual(first.json()["line"], "22")
         self.assertEqual([s["name"] for s in first.json()["stops"]], ["Powązkowska", "Niska", "Okopowa"])
         self.assertEqual(fetch.call_count, 2)
 
@@ -115,7 +116,8 @@ class LiveRideStopsTest(TestCase):
     def test_line_without_route(self, fetch):
         fetch.side_effect = self.feed(live("1000", "999", 52.20, 21.00))
         r = self.client.get("/api/ride/1000/stops/")
-        self.assertEqual((r.status_code, r.json()["code"]), (404, "no_route"))
+        self.assertEqual(r.status_code, 404)
+        self.assertEqual(r.json(), {"code": "no_route", "line": "999"})
 
     @patch("transit.services.fetch_vehicle_positions", side_effect=WarsawApiError("down"))
     def test_city_api_down(self, fetch):

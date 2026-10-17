@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+import { ErrorStatusProvider } from "./ErrorStatus";
 import { ScreenSwitcher } from "./ScreenSwitcher";
 
 vi.mock("qr-scanner", () => ({
@@ -9,7 +10,11 @@ vi.mock("qr-scanner", () => ({
 
 function openAt(url: string) {
   window.history.replaceState(null, "", url);
-  render(<ScreenSwitcher />);
+  render(
+    <ErrorStatusProvider>
+      <ScreenSwitcher />
+    </ErrorStatusProvider>,
+  );
 }
 
 describe("ScreenSwitcher", () => {
