@@ -89,6 +89,11 @@ resource "google_cloud_run_v2_service" "backend" {
       }
 
       env {
+        name  = "CITY_API_LIVE"
+        value = "0"
+      }
+
+      env {
         name  = "DATABASE_URL"
         value = "postgres://${urlencode(local.api_db_user)}@127.0.0.1:5432/${google_sql_database.main.name}"
       }
