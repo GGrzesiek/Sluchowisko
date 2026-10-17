@@ -60,7 +60,7 @@ Skopiuj tę listę i odhaczaj kolejne kroki:
 
 - Kroki 2–4 (co wchodzi, rodzaje faktów, pewność, sprzeczności, cytaty i licencje): [reference/zasada-prawdy.md](reference/zasada-prawdy.md).
 - Kroki 5–9 (mosty, haczyki, sposoby zmiany, kształt narracji, ton): [reference/mosty-i-haczyki.md](reference/mosty-i-haczyki.md).
-- Trzy przykłady całego rozumowania: [reference/przyklady.md](reference/przyklady.md). Przykłady pokazują **sposób**, nie treść — nigdy nie bierz z nich faktów.
+- Trzy przykłady całego rozumowania: [reference/przyklady.md](reference/przyklady.md). Fakty z przykładów możesz wykorzystać, gdy przystanek jest tym samym miejscem, ale jak każdy fakt muszą mieć dowód we fragmencie: z wejścia albo dociągniętym. Przykład podpowiada, gdzie szukać.
 
 ## Twarde reguły (skrót)
 
