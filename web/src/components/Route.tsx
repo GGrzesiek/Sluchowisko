@@ -52,7 +52,8 @@ function stopX(index: number, count: number, offset = 0): string {
   return `calc(${START + offset}px + (100% - ${START + END_PAD}px) * ${fraction})`;
 }
 
-const MOVE = "transition-[left,top,bottom,width,height,opacity] duration-700 ease-smooth motion-reduce:transition-none";
+const MOVE =
+  "transition-[left,top,bottom,width,height,opacity,color,background-color,border-color] duration-700 ease-smooth motion-reduce:transition-none";
 
 function stopKeys(stops: RouteStop[]): string[] {
   const seen = new Map<string, number>();
@@ -106,10 +107,12 @@ export function RouteStrip({
   className,
 }: RouteStripProps) {
   const stops = windowStops(allStops, before, after);
-  const keys = stopKeys(stops);
-  const [initial] = useState(() => new Map(stops.map((s, i) => [keys[i], s.etaMinutes])));
-  const currentIndex = stops.findIndex((s) => s.state === "current");
-  const splitX = currentIndex >= 0 ? stopX(currentIndex, stops.length) : "0px";
+  const slots = before + after + 1;
+  const keys = stopKeys(allStops);
+  const currentIdx = allStops.findIndex((s) => s.state === "current");
+  const reference = currentIdx >= 0 ? currentIdx : before;
+  const [initial] = useState(() => new Map(allStops.map((s, i) => [keys[i], s.etaMinutes])));
+  const splitX = stopX(before, slots);
   return (
     <div
       role="img"
@@ -126,13 +129,24 @@ export function RouteStrip({
         )}
         style={{ top: axisY - 6.5 }}
       />
-      {stops.map((s, i) => {
-        const n = stops.length;
+      {allStops.map((s, i) => {
+        const slot = i - reference + before;
+        if (slot < -1 || slot > slots) return null;
+        const shown = slot >= 0 && slot < slots;
+        const n = slots;
+        const k = keys[i];
         const now = s.state === "current";
         const passed = s.state === "passed";
         const size = now ? 14 : passed ? 10 : 12;
         return (
-          <div key={keys[i]} className={initial.has(keys[i]) ? undefined : "animate-fade-in"}>
+          <div
+            key={k}
+            aria-hidden={!shown}
+            className={cx(
+              "transition-opacity duration-700 ease-smooth motion-reduce:transition-none",
+              !shown && "pointer-events-none opacity-0",
+            )}
+          >
             <StopLabel
               name={s.name}
               maxWidth={now ? 176 : 140}
@@ -143,20 +157,20 @@ export function RouteStrip({
                     ? "text-[13px] font-medium text-umber"
                     : "text-[13px] font-medium text-ink",
               )}
-              style={{ left: stopX(i, n, 4), top: axisY - 26 }}
+              style={{ left: stopX(slot, n, 4), top: axisY - 26 }}
             />
             {now && (
               <>
                 <span
                   className={cx("animate-ping-soft absolute box-border border-2 border-bus", MOVE)}
-                  style={{ left: stopX(i, n, -size / 2), top: axisY - size / 2, width: size, height: size }}
+                  style={{ left: stopX(slot, n, -size / 2), top: axisY - size / 2, width: size, height: size }}
                 />
                 <span
                   className={cx(
                     "animate-ping-soft absolute box-border border-2 border-bus [animation-delay:0.9s]",
                     MOVE,
                   )}
-                  style={{ left: stopX(i, n, -size / 2), top: axisY - size / 2, width: size, height: size }}
+                  style={{ left: stopX(slot, n, -size / 2), top: axisY - size / 2, width: size, height: size }}
                 />
               </>
             )}
@@ -168,12 +182,12 @@ export function RouteStrip({
                 passed && "bg-road",
                 !now && !passed && "border-[2.5px] border-ink bg-paper",
               )}
-              style={{ left: stopX(i, n, -size / 2), top: axisY - size / 2, width: size, height: size }}
+              style={{ left: stopX(slot, n, -size / 2), top: axisY - size / 2, width: size, height: size }}
             />
             {s.hasStory && (
               <span
                 className={cx("absolute", MOVE, now ? "text-bus" : "text-umber")}
-                style={{ left: stopX(i, n, -7), top: axisY + 20 }}
+                style={{ left: stopX(slot, n, -7), top: axisY + 20 }}
               >
                 <UiIcon name="headphones" size={14} strokeWidth={2.4} />
               </span>
@@ -183,10 +197,10 @@ export function RouteStrip({
                 key={s.etaMinutes}
                 className={cx(
                   "absolute whitespace-nowrap font-mono text-[11px] font-semibold tracking-[0.04em] text-ink",
-                  !(initial.has(keys[i]) && initial.get(keys[i]) === s.etaMinutes) && "animate-fade-in",
+                  !(initial.has(k) && initial.get(k) === s.etaMinutes) && "animate-fade-in",
                   MOVE,
                 )}
-                style={{ left: stopX(i, n, -14), top: axisY + 20 }}
+                style={{ left: stopX(slot, n, -14), top: axisY + 20 }}
               >
                 {s.etaMinutes} MIN
               </span>
