@@ -1,6 +1,6 @@
 # Przykłady rozumowania
 
-**Uwaga:** przykłady pokazują sposób pracy, nie treść. Fakty z tych przykładów nigdy nie trafiają do wyjścia — nawet gdy przystanek z wejścia jest tym samym miejscem. Wtedy korzystasz wyłącznie z fragmentów z wejścia.
+**Uwaga:** przykłady pokazują przede wszystkim sposób pracy. Gdy przystanek z wejścia jest tym samym miejscem (Okopowa i Francuska są przystankami demo), możesz wykorzystać fakty z przykładu, ale każdy z nich musi mieć dowód we fragmencie: z wejścia albo dociągniętym ze źródła wskazanego w przykładzie. Bez dowodu fakt idzie do `braki`.
 
 Wejście i wyjście są skrócone: pokazane są tylko pola, które ilustrują daną decyzję.
 
