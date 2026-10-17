@@ -50,7 +50,7 @@ describe("live ride", () => {
 
   it("connects a WebSocket for the vehicle", () => {
     openRide();
-    expect(socket().url).toMatch(/\/ws\/ride\/3122\/\?device_id=.+/);
+    expect(socket().url).toMatch(/\/ws\/ride\/3122\/$/);
   });
 
   it("shows the vehicle's real route once the backend pushes it", async () => {
@@ -170,5 +170,24 @@ describe("live ride", () => {
     expect(first.sent).toEqual([JSON.stringify({ type: "ping" })]);
     await act(() => vi.advanceTimersByTimeAsync(10_000));
     expect(first.closed).toBe(true);
+  });
+
+  it("shows the story the backend sends for the current stop on the journey screen", async () => {
+    openRide();
+    await answer("route", ride("Okopowa"));
+    fireEvent.click(await screen.findByRole("button", { name: "Zaczynamy" }));
+    await screen.findByRole("button", { name: "Zakończ przejazd" });
+    await answer("location", {
+      groupId: "5002",
+      story: {
+        groupId: "5002",
+        title: "Cmentarz Powązkowski",
+        photos: [{ alt: "Brama", year: "1900", caption: "Brama główna", credit: "Fot. NN · domena publiczna" }],
+        body: { format: "plain", text: "Tekst o cmentarzu." },
+        sources: [{ label: "Wikipedia", href: "https://pl.wikipedia.org/wiki/Cmentarz" }],
+      },
+    });
+    expect((await screen.findAllByText("Cmentarz Powązkowski")).length).toBeGreaterThan(0);
+    expect(screen.queryByText("Hala Mirowska")).not.toBeInTheDocument();
   });
 });

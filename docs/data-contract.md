@@ -4,19 +4,84 @@ Shapes the app (`web/`) reads from the back end and from static files.
 
 ## Ride WebSocket
 
-`wss://<backend>/ws/ride/<vehicle>/?device_id=<uuid>`
+`wss://<backend>/ws/ride/<vehicle>/`
 
-Every message from the server is `{"type": "<type>", "data": {...}}`. The client sends `{"type": "ping"}` and gets
-`{"type": "pong", "data": {}}`.
+Every message is JSON: `{"type": "<type>", "data": <payload>}`. The server pushes every `WS_PUSH_INTERVAL_SECONDS`
+(10 s by default) and only sends what changed. The client sends `{"type": "ping"}` and gets `{"type": "pong", "data": {}}`.
 
-| `type`     | When                                               | `data`                                   |
-| ---------- | -------------------------------------------------- | ---------------------------------------- |
-| `route`    | On connect and whenever the stop states change     | `RideInfo` (`web/src/types.ts`)          |
-| `audio`    | Once per stop group, when it becomes the next stop | see below                                |
-| `location` | When new facts are ahead of the vehicle            | `LocationInfo` (`web/src/rideSocket.ts`) |
-| `error`    | Once per new problem                               | `{"code": "...", "line"?: "..."}`        |
+| `type`     | When                                                        | `data`                                        |
+| ---------- | ----------------------------------------------------------- | --------------------------------------------- |
+| `route`    | On connect and whenever the route or the stop states change | `RideInfo` (`web/src/types.ts`)               |
+| `audio`    | Once per stop group, when it becomes the next stop          | see below                                     |
+| `location` | When the vehicle reaches a new stop group, once per group   | `{"groupId": "5002", "story": <story>\|null}` |
+| `error`    | Once per new problem                                        | `{"code": "...", "line"?: "..."}`             |
+| `pong`     | In answer to `ping`                                         | `{}`                                          |
 
 Each stop in `RideInfo.stops` has `groupId`, the stop group id (`zespol`) used by stories and audio.
+
+`route` data:
+
+```json
+{
+  "vehicle": "3122",
+  "line": "22",
+  "destination": "Wiatraczna",
+  "stops": [
+    { "name": "Okopowa", "groupId": "5004", "state": "passed" | "current" | "next" | "upcoming",
+      "etaMinutes": 4, "hasStory": true }
+  ]
+}
+```
+
+`etaMinutes` is missing for passed and current stops. `hasStory` is missing when the stop group has no verified story.
+
+`location` is about the stop group that is `current` in the last `route`. `story` is `null` when that group has no
+verified story. Drafts and rejected stories are never sent.
+
+`story`:
+
+```json
+{
+  "groupId": "5002",
+  "title": "Cmentarz Powązkowski",
+  "photos": [
+    {
+      "src": "https://...",
+      "alt": "...",
+      "year": "1936",
+      "caption": "...",
+      "credit": "Fot. Jan Kowalski · domena publiczna"
+    }
+  ],
+  "body": { "format": "plain", "text": "..." },
+  "blocks": [
+    { "type": "paragraph", "text": "...", "sources": [1] },
+    { "type": "image", "photo": 0 },
+    { "type": "timeline", "items": [{ "year": "1790", "text": "...", "sources": [1] }] }
+  ],
+  "sources": [{ "label": "Wikipedia", "href": "https://..." }]
+}
+```
+
+`body.text` is always the whole story as plain text. `blocks` is the same story split into typed blocks, `[]` when the
+story has none. A client that does not know a block type skips it. `image.photo` is an index into `photos`, and
+`sources` are 1-based numbers of entries in `sources`.
+
+| Block       | Fields                                                      |
+| ----------- | ----------------------------------------------------------- |
+| `paragraph` | `text`, optional `sources`                                  |
+| `image`     | `photo`                                                     |
+| `timeline`  | `items`: at least one `{ year (4 digits), text, sources? }` |
+
+`photos` has 1 to 5 items. `credit` is built from the author and licence of the photo.
+
+`error` codes: `vehicle_not_found` (the server then closes with code 4404), `no_route`, `no_live_data`, `city_api`
+and `internal`. All but `vehicle_not_found` are temporary: the connection stays open and the server keeps trying.
+
+### Client to server
+
+`{"type": "ping"}` is answered with `pong`. Any other message gets an `error` with `invalid_json` or
+`unknown_message`; the connection stays open.
 
 ### `audio`
 
@@ -72,3 +137,10 @@ narration, loses its recording until the next `sync_audio`.
 `GET /api/stories/<groupId>/` and the static files from `python manage.py export_stories` return `StoryContent`
 (`web/src/types.ts`) plus `groupId` and `narration`. When the story has a recording, it also has `audio` (the public
 URL, as in `StoryContent.audio?: string`), `audioSeconds` and `aiVoice: true`; without one these keys are absent.
+
+## Writing a story
+
+`PUT /api/stories/<group_id>/` with the write token (`Authorization: Bearer <token>`). A photo needs `src`, `alt`,
+`caption`, `author`, `license` and `source_url`; `year`, `license_url` are optional. A story needs 1 to 5 photos, at
+least one source, and `text` or `blocks`. When only `blocks` is given, `text` is generated from them. Block types and
+references to photos and sources are validated, and a bad block rejects the whole story. Only stories with status `verified` reach the app.

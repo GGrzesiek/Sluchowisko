@@ -35,6 +35,7 @@ def story_payload(group_id="7001", **extra):
                 "caption": "Hala Mirowska",
                 "author": "NN",
                 "license": "domena publiczna",
+                "source_url": "https://commons.wikimedia.org/wiki/File:A.jpg",
             }
         ],
         "sources": [{"label": "Hale Mirowskie · Wikipedia", "href": "https://pl.wikipedia.org/wiki/Hale_Mirowskie"}],
@@ -84,10 +85,53 @@ class StoryApiTest(TestCase):
             story_payload(photos=story_payload()["photos"] * 6),
             story_payload(sources=[{"label": "x", "href": "not-a-url"}]),
             story_payload(photos=[{**story_payload()["photos"][0], "license": ""}]),
+            story_payload(photos=[{**story_payload()["photos"][0], "author": ""}]),
+            story_payload(photos=[{**story_payload()["photos"][0], "source_url": ""}]),
             story_payload(status="published"),
         ]
         for payload in cases:
             self.assertEqual(self.agent.put("/api/stories/7001/", payload, format="json").status_code, 400)
+
+    def test_blocks_are_stored_and_a_plain_text_is_derived(self):
+        blocks = [
+            {"type": "paragraph", "text": "Tu stała brama.", "sources": [1]},
+            {"type": "image", "photo": 0},
+            {
+                "type": "timeline",
+                "items": [{"year": "1790", "text": "Założenie cmentarza"}, {"year": "1944", "text": "Powstanie"}],
+            },
+        ]
+        payload = story_payload(blocks=blocks, status="verified")
+        del payload["text"]
+        r = self.agent.put("/api/stories/7001/", payload, format="json")
+        self.assertEqual(r.status_code, 201, r.content)
+        body = self.client.get("/api/stories/7001/").json()
+        self.assertEqual([b["type"] for b in body["blocks"]], ["paragraph", "image", "timeline"])
+        self.assertEqual(body["body"]["text"], "Tu stała brama.\n\n1790: Założenie cmentarza\n1944: Powstanie")
+
+    def test_story_without_blocks_has_an_empty_list(self):
+        self.agent.put("/api/stories/7001/", story_payload(status="verified"), format="json")
+        self.assertEqual(self.client.get("/api/stories/7001/").json()["blocks"], [])
+
+    def test_invalid_blocks_are_rejected(self):
+        bad = [
+            [{"type": "video", "src": "x"}],
+            [{"type": "paragraph"}],
+            [{"type": "paragraph", "text": "x", "sources": [2]}],
+            [{"type": "image", "photo": 1}],
+            [{"type": "timeline", "items": []}],
+            [{"type": "timeline", "items": [{"year": "około 1790", "text": "x"}]}],
+            "not a list",
+            ["paragraph"],
+        ]
+        for blocks in bad:
+            r = self.agent.put("/api/stories/7001/", story_payload(blocks=blocks), format="json")
+            self.assertEqual(r.status_code, 400, blocks)
+
+    def test_text_or_blocks_is_required(self):
+        payload = story_payload()
+        del payload["text"]
+        self.assertEqual(self.agent.put("/api/stories/7001/", payload, format="json").status_code, 400)
 
     def test_frontend_sees_only_verified(self):
         self.agent.put("/api/stories/7001/", story_payload(), format="json")

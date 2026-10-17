@@ -1,5 +1,5 @@
 import { rideSocketUrl, type RideProblem } from "./api";
-import type { RideInfo } from "./types";
+import type { RideInfo, StoryContent } from "./types";
 
 export const PING_MS = 20_000;
 export const PONG_TIMEOUT_MS = 10_000;
@@ -7,20 +7,9 @@ export const RECONNECT_MIN_MS = 1_000;
 export const RECONNECT_MAX_MS = 10_000;
 const CLOSE_UNKNOWN_VEHICLE = 4404;
 
-export interface LocationFact {
-  id: number;
-  title: string;
-  text: string;
-  source_url: string;
-  images: { url: string }[];
-  distance_m: number;
-  eta_s: number | null;
-}
-
 export interface LocationInfo {
-  estimated_position: { lat: number; lon: number };
-  stale: boolean;
-  facts: LocationFact[];
+  groupId: string;
+  story: StoryContent | null;
 }
 
 export interface RideSocketHandlers {
@@ -35,18 +24,6 @@ const PROBLEMS: Record<string, RideProblem> = {
   no_route: "noRoute",
   no_live_data: "noLiveData",
 };
-
-export function deviceId(): string {
-  try {
-    const stored = window.localStorage.getItem("deviceId");
-    if (stored) return stored;
-    const created = window.crypto.randomUUID();
-    window.localStorage.setItem("deviceId", created);
-    return created;
-  } catch {
-    return "anonymous";
-  }
-}
 
 function isRideInfo(body: unknown): body is RideInfo {
   if (typeof body !== "object" || body === null) return false;
@@ -88,7 +65,7 @@ export function openRideSocket(vehicle: string, handlers: RideSocketHandlers): (
   };
 
   const connect = () => {
-    const ws = new WebSocket(rideSocketUrl(vehicle, deviceId()));
+    const ws = new WebSocket(rideSocketUrl(vehicle));
     socket = ws;
     ws.onopen = () => {
       attempt = 0;

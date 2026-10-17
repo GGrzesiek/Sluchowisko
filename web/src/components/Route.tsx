@@ -186,7 +186,9 @@ export function RouteStrip({
             />
             {s.hasStory && (
               <span
-                className={cx("absolute", MOVE, now ? "text-bus" : "text-umber")}
+                aria-hidden="true"
+                data-story-icon={now ? "shown" : "hidden"}
+                className={cx("absolute text-bus", MOVE, !now && "opacity-0")}
                 style={{ left: stopX(slot, n, -7), top: axisY + 20 }}
               >
                 <UiIcon name="headphones" size={14} strokeWidth={2.4} />
