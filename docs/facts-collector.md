@@ -38,6 +38,10 @@ line and direction do not matter for the story.
    time to any neighbouring group over all lines and directions. The 10 s margin covers the 10 s position refresh.
    Timetable times are in whole minutes, so this is approximate, which is fine for the POC.
 
+Steps 5 and 6 depend on the route table (#32), which is route data, not facts. Until it exists, `routes` is an empty
+list and `target_duration_s` is `null`; the collector still writes the file. When the route table is ready, the
+collector fills both from it without changing anything else in the file.
+
 ## 3. Step 2: the area
 
 For each group:
@@ -74,13 +78,13 @@ One radius for everything nearby: **400 m**.
 The full decision on which sources to take automatically, by hand, or not at all is part of #9 and stays yours.
 This table is only what the agent cannot work without.
 
-| Source                                      | How                                                                                                                                              | `type`         |
-| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | -------------- |
-| Polish Wikipedia                            | geosearch, 400 m, up to 50 results; plus articles linked from objects; plus an article named after the stop, if one exists; plus patron articles | `encyclopedia` |
-| Wikipedia of the district / neighbourhood   | from step 2                                                                                                                                      | `encyclopedia` |
-| Warszawikia (`warszawa.fandom.com/api.php`) | search by stop name and by street names within 400 m (lower priority; licence to confirm)                                                        | `varsaviana`   |
-| City data (dane.um, old API)                | see "City data as fragments" below                                                                                                               | `city_data`    |
-| NID heritage register                       | objects with `ref:nid` / P1435 nearby                                                                                                            | `official`     |
+| Source                                      | How                                                                                                                                                                               | `type`         |
+| ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
+| Polish Wikipedia                            | plain-text extracts (see below); geosearch, 400 m, up to 50 results; plus articles linked from objects; plus an article named after the stop, if one exists; plus patron articles | `encyclopedia` |
+| Wikipedia of the district / neighbourhood   | from step 2                                                                                                                                                                       | `encyclopedia` |
+| Warszawikia (`warszawa.fandom.com/api.php`) | search by stop name and by street names within 400 m (lower priority; CC BY-SA, from the wiki's `siteinfo`)                                                                       | `varsaviana`   |
+| City data (dane.um, old API)                | see "City data as fragments" below                                                                                                                                                | `city_data`    |
+| NID heritage register                       | objects with `ref:nid` / P1435 nearby                                                                                                                                             | `official`     |
 
 Suggested to leave out of the automatic run: warszawa1939.pl, blogs, press, local portals (no API, NC licences, or
 they need judgement). The agent can fetch them through tools when it decides they are worth it (section 8). Your
@@ -91,8 +95,13 @@ call in #9.
 The agent proves every fact with a **verbatim quote** from a fragment, and code checks that the quote really is in the
 fragment. So fragments must be the source text itself:
 
-- Plain text exactly as in the source. **No summarising, no rewording, no translation.** Strip HTML and wiki markup
-  only.
+- Plain text exactly as in the source. **No summarising, no rewording, no translation.**
+- Prefer text that is already plain, so the cached raw response and the fragment match. For Wikipedia use
+  `action=query&prop=extracts&explaintext=1&exsectionformat=wiki`: the response is plain text with `== Section ==`
+  headings, which is also how it is split into sections.
+- Warszawikia (Fandom) has no `extracts` (checked 2026-10-17), so its wikitext is converted to plain text in code. The
+  converter is one deterministic function, and the quote check (section 10) runs the same function on the cached raw
+  response before searching it.
 - Normalise to Unicode NFC and collapse runs of whitespace into one space.
 - One fragment per article section. If a section is longer than about 4000 characters, split it at paragraph
   boundaries.
@@ -102,12 +111,24 @@ fragment. So fragments must be the source text itself:
 ### City data as fragments
 
 City data comes in as one-sentence fragments generated from a fixed template, with the numbers from the response.
-The agent then quotes it like any other source. Examples:
+The agent then quotes it like any other source.
+
+These fragments are not verbatim source text, so they are marked and checked differently:
+
+- `"derived": true`, plus `template` (the template ID) and `values` (the numbers and names inserted into it).
+- The check renders `template` with `values` and compares it with `text`, then checks that every value comes from the
+  cached response or a computation over it (for example a median).
+- All other fragments have `"derived": false` and no `template` or `values`.
+
+Examples:
 
 - RCN (`get_bgk_rcn`): "Mediana ceny 1 m² lokalu mieszkalnego w transakcjach z {year} r. w promieniu 400 m od
   przystanku {name} wyniosła {price} zł ({n} transakcji)." RCN coordinates are in PL-2000; convert them first.
 - Participatory budget (`get_cks_budzet_obywatelski`): one fragment per project within 400 m or in the same
   neighbourhood: title, year, status, cost.
+- Streets in 1939 (`HISTORIA_ULICE_1939`, a WMS layer; attributes come from its WFS counterpart): for streets within 400 m, whether the street existed in 1939
+  and under what name: "W 1939 r. w promieniu 400 m od przystanku {name} istniała ulica {name_1939}." This is the most
+  direct city dataset for "how this place changed".
 - Trees (old API): the 3 trees with the largest trunk girth within 400 m: species, girth, measurement year.
 - Road investments (old API): investments on streets within 400 m that are ongoing or planned: name, dates.
 
@@ -124,7 +145,7 @@ The agent then quotes it like any other source. Examples:
 | `license_url`       |                                                                                                                                          |
 | `author`            | for literature and signed texts, else `null`                                                                                             |
 | `author_death_year` | for literature (from Wikidata P570); decides whether quotes are public domain                                                            |
-| `retrieved_at`      | ISO date                                                                                                                                 |
+| `retrieved_at`      | ISO date of the cached response, not of the run, so a rerun from cache gives the same file                                               |
 
 **`type` matters**: the agent decides how much to trust a fact from it. Wikipedia is `encyclopedia`, dane.um and the
 old API are `city_data`, NID and council resolutions are `official`, museums, archives, IPN and dzieje.pl are
@@ -136,8 +157,17 @@ Candidates only. The agent picks up to 5. About 15 candidates per group is enoug
 
 1. **Wikimedia Commons**: images used in the fetched Wikipedia articles, plus Commons geosearch (namespace 6) within
    400 m. Read `extmetadata`: `ImageDescription`, `Artist`, `LicenseShortName`, `LicenseUrl`, `DateTimeOriginal`.
-2. **City photo maps**: WMS `GetMap` for the 1935 and 1945 photo maps and the latest orthophoto, same bounding box
-   (about 800 × 800 m, i.e. the 400 m radius around the group), 1024 px. Get the layer names from `GetCapabilities`.
+2. **City maps**: WMS `GetMap` from `https://wms.um.warszawa.pl/serwis`, same bounding box for all (about
+   800 × 800 m, i.e. the 400 m radius around the group), 1024 px. Layers (from `GetCapabilities`, checked
+   2026-10-17):
+
+   | Layer                  | What                   | Image `kind`     |
+   | ---------------------- | ---------------------- | ---------------- |
+   | `RASTER_FOTOPLAN_1935` | 1935 photo map         | `photo_map_1935` |
+   | `RASTER_PLAN_1939`     | 1939 city plan         | `plan_1939`      |
+   | `RASTER_ORTOFOTO_1945` | 1945 aerial photo      | `photo_map_1945` |
+   | `RASTER_FOTOPLAN_2021` | latest dated photo map | `orthophoto`     |
+
 3. Muzeum Warszawy public-domain items: optional, by hand for the demo.
 
 Rules:
@@ -146,7 +176,8 @@ Rules:
   hackathon; mark it. Skip ND.
 - `caption` is the description from the source, with HTML stripped. If the source has none, use
   `"Źródło: {publisher}"`. Never generate a caption.
-- Photo map captions come from a fixed template: "Fotoplan Warszawy {year}, okolice przystanku {name}".
+- Map captions come from a fixed template: "Fotoplan Warszawy {year}, okolice przystanku {name}" (for the 1939 plan:
+  "Plan Warszawy 1939, okolice przystanku {name}").
 - Download to `out/images/<group_id>/<image_id>.jpg`, at most 1600 px wide. Keep the original URL.
 
 ## 7. Output file
@@ -214,7 +245,14 @@ One file per group: `out/collected/<group_id>.json`.
     }
   ],
   "fragments": [
-    { "id": "s1#1", "source_id": "s1", "section": "Historia", "text": "…verbatim text…", "object_id": "o1" }
+    {
+      "id": "s1#1",
+      "source_id": "s1",
+      "section": "Historia",
+      "text": "…verbatim text…",
+      "object_id": "o1",
+      "derived": false
+    }
   ],
   "images": [
     {
@@ -236,7 +274,9 @@ One file per group: `out/collected/<group_id>.json`.
 ```
 
 `kind` for objects: `street`, `square`, `building`, `monument`, `memorial`, `park`, `church`, `institution`, `other`.
-`kind` for images: `photo`, `photo_map_1935`, `photo_map_1945`, `orthophoto`.
+`kind` for images: `photo`, `photo_map_1935`, `plan_1939`, `photo_map_1945`, `orthophoto`.
+
+`derived` is `false` for every fragment except city data (see "City data as fragments").
 
 Arrays are sorted (objects by distance, fragments by ID) so two runs on the same cache give the same file.
 
@@ -273,15 +313,17 @@ For Książęca, Rozbrat and Pl. Trzech Krzyży (line 131):
 
 - [ ] `out/collected/<group_id>.json` exists and validates against the shared model.
 - [ ] Each file has at least 5 sources and 10 fragments.
-- [ ] Every fragment's text can be found in the cached raw response it came from (after the same normalisation).
+- [ ] Every fragment with `derived: false` can be found in the cached raw response it came from (after the same
+      normalisation). Every fragment with `derived: true` renders from its `template` and `values`.
 - [ ] Each has at least 3 licensed image candidates and the 1935 photo map crop.
-- [ ] `routes` and `target_duration_s` are filled from the route table.
+- [ ] `routes` and `target_duration_s` are filled from the route table, once it exists (#32). Not a blocker before.
 - [ ] At least one `city_data` fragment per group.
 - [ ] A second run with the network off produces identical files.
 
 ## 11. Open questions
 
-- Warszawikia licence: check the footer before using it.
-- Exact WMS layer names for the 1935 and 1945 photo maps.
+- Endpoints `get_bgk_rcn` and `get_cks_budzet_obywatelski`: with an empty body both returned
+  `HTTP 500 {"message":"Service unavailable"}` on 2026-10-17. Check the required parameters before writing templates.
+- WFS layer name for `HISTORIA_ULICE_1939` and whether it carries the 1939 street name as an attribute.
 - Does the route table (#32) give travel times per pair of stops, or do we compute them from departures?
 - Old API: download trees and road investments for the demo lines now, before the service is switched off.
