@@ -1,6 +1,6 @@
 # Przykłady rozumowania
 
-**Uwaga:** przykłady pokazują przede wszystkim sposób pracy. Gdy przystanek z wejścia jest tym samym miejscem (Okopowa i Francuska są przystankami demo), możesz wykorzystać fakty z przykładu, ale każdy z nich musi mieć dowód we fragmencie: z wejścia albo dociągniętym ze źródła wskazanego w przykładzie. Bez dowodu fakt idzie do `braki`.
+**Uwaga:** przykłady pokazują przede wszystkim sposób pracy. Gdy przystanek z wejścia jest tym samym miejscem (Okopowa i Francuska są przystankami demo), możesz wykorzystać fakty z przykładu, ale każdy z nich musi mieć dowód we fragmencie: z wejścia albo dociągniętym ze źródła wskazanego w przykładzie. Bez dowodu fakt idzie do `gaps`.
 
 Wejście i wyjście są skrócone: pokazane są tylko pola, które ilustrują daną decyzję.
 
@@ -22,75 +22,75 @@ Spis treści
 
 **Kluczowe decyzje**
 
-- Nazwa i kształt ulicy są historią → most **C**. Pasażer jedzie po linii wału → sposób **`slad`**, bo związek przyczynowy („ulica biegnie linią wału”) podaje źródło, a nie my.
-- Getto i egzekucje to prawda o tym miejscu, ale nie odpowiedź na pytanie „skąd ta nazwa i ten kształt”. Ta sama ulica ma równie mocną, lżejszą historię → trudna warstwa idzie do `warstwy_zapasowe` z `ton: tragiczny`, nie znika.
+- Nazwa i kształt ulicy są historią → most **C**. Pasażer jedzie po linii wału → sposób **`trace`**, bo związek przyczynowy („ulica biegnie linią wału”) podaje źródło, a nie my.
+- Getto i egzekucje to prawda o tym miejscu, ale nie odpowiedź na pytanie „skąd ta nazwa i ten kształt”. Ta sama ulica ma równie mocną, lżejszą historię → trudna warstwa idzie do `spare_layers` z `tone: tragic`, nie znika.
 - Haczyk: Kercelak — da się wrócić do miejsca (nazwa ronda, które mijasz).
 
 **Wyjście (skrót)**
 
 ```json
 {
-  "fakty": [
+  "facts": [
     {
       "id": "F1",
-      "tekst": "W 1770 r. marszałek Stanisław Lubomirski kazał usypać wokół Warszawy wał z fosą z obawy przed dżumą.",
-      "dowody": [{ "fragment": "s1#1", "cytat": "…" }],
-      "rodzaj": "fakt",
-      "pewnosc": "potwierdzony",
-      "era": "przed1800"
+      "text": "W 1770 r. marszałek Stanisław Lubomirski kazał usypać wokół Warszawy wał z fosą z obawy przed dżumą.",
+      "evidence": [{ "fragment_id": "s1#1", "quote": "…" }],
+      "kind": "fact",
+      "confidence": "confirmed",
+      "era": "before_1800"
     },
     {
       "id": "F2",
-      "tekst": "Zaraza nie dotarła do Warszawy; według Muzeum Warszawy miasto uratowała zima.",
-      "dowody": [{ "fragment": "s1#2", "cytat": "…" }],
-      "rodzaj": "fakt",
-      "pewnosc": "potwierdzony",
-      "era": "przed1800"
+      "text": "Zaraza nie dotarła do Warszawy; według Muzeum Warszawy miasto uratowała zima.",
+      "evidence": [{ "fragment_id": "s1#2", "quote": "…" }],
+      "kind": "fact",
+      "confidence": "confirmed",
+      "era": "before_1800"
     },
     {
       "id": "F4",
-      "tekst": "Dzisiejszy przebieg Okopowej i Towarowej to niemal dokładnie linia dawnego wału.",
-      "dowody": [{ "fragment": "s2#1", "cytat": "…" }],
-      "rodzaj": "fakt",
-      "pewnosc": "srednia",
-      "era": "przed1800"
+      "text": "Dzisiejszy przebieg Okopowej i Towarowej to niemal dokładnie linia dawnego wału.",
+      "evidence": [{ "fragment_id": "s2#1", "quote": "…" }],
+      "kind": "fact",
+      "confidence": "medium",
+      "era": "before_1800"
     }
   ],
-  "kandydaci_osi": [
+  "axis_candidates": [
     {
-      "os": "Ulica biegnie linią wału przeciw dżumie",
-      "most_typ": "C",
-      "uzasadnienie": "Nazwa i kształt ulicy, po której jedziesz, wynikają z wału."
+      "axis": "Ulica biegnie linią wału przeciw dżumie",
+      "bridge_type": "C",
+      "reason": "Nazwa i kształt ulicy, po której jedziesz, wynikają z wału."
     },
     {
-      "os": "Okopowa jako granica getta",
-      "most_typ": "A",
-      "uzasadnienie": "Prawdziwe i ważne, ale ton tragiczny; lżejsza warstwa ma równie mocny most."
+      "axis": "Okopowa jako granica getta",
+      "bridge_type": "A",
+      "reason": "Prawdziwe i ważne, ale ton tragiczny; lżejsza warstwa ma równie mocny most."
     }
   ],
-  "historia": {
+  "story": {
     "status": "ok",
-    "os": "Okopowa jest kręta, bo wciąż biegnie linią wału usypanego w 1770 r. przeciw dżumie.",
-    "pytanie_sluchacza": "Dlaczego ta ulica nazywa się Okopowa i biegnie właśnie tak?",
-    "most": {
-      "typ": "C",
-      "zdanie_robocze": "Jedziesz po linii dawnego wału — stąd nazwa i kształt ulicy.",
-      "fakty": ["F1", "F4"]
+    "axis": "Okopowa jest kręta, bo wciąż biegnie linią wału usypanego w 1770 r. przeciw dżumie.",
+    "listener_question": "Dlaczego ta ulica nazywa się Okopowa i biegnie właśnie tak?",
+    "bridge": {
+      "type": "C",
+      "draft": "Jedziesz po linii dawnego wału — stąd nazwa i kształt ulicy.",
+      "fact_ids": ["F1", "F4"]
     },
-    "haczyk": { "fakty": ["F6"], "dlaczego_ten": "Kercelak pozwala wrócić do miejsca: została po nim nazwa ronda." },
-    "sposob_zmiany": "slad",
-    "kroki": [
-      { "rola": "kotwica", "fakty": [], "notatka": "Jedziesz po dawnej granicy miasta." },
-      { "rola": "fakt_o_miejscu", "fakty": ["F1", "F2"] },
-      { "rola": "fakt_o_miejscu", "fakty": ["F4"] },
-      { "rola": "skok", "fakty": ["F6"] },
-      { "rola": "powrot", "fakty": ["F7"], "notatka": "Po bazarze została nazwa ronda, które mijasz." }
+    "hook": { "fact_ids": ["F6"], "why": "Kercelak pozwala wrócić do miejsca: została po nim nazwa ronda." },
+    "change_mode": "trace",
+    "steps": [
+      { "role": "anchor", "fact_ids": [], "note": "Jedziesz po dawnej granicy miasta." },
+      { "role": "place_fact", "fact_ids": ["F1", "F2"] },
+      { "role": "place_fact", "fact_ids": ["F4"] },
+      { "role": "jump", "fact_ids": ["F6"] },
+      { "role": "return", "fact_ids": ["F7"], "note": "Po bazarze została nazwa ronda, które mijasz." }
     ],
-    "ton": "lekki",
-    "era": "przed1800"
+    "tone": "light",
+    "era": "before_1800"
   },
-  "warstwy_zapasowe": [
-    { "os": "Okopowa jako granica getta", "most_typ": "A", "fakty": ["F9", "F10"], "ton": "tragiczny" }
+  "spare_layers": [
+    { "axis": "Okopowa jako granica getta", "bridge_type": "A", "fact_ids": ["F9", "F10"], "tone": "tragic" }
   ]
 }
 ```
@@ -109,59 +109,59 @@ Spis treści
 
 - Pasażer słyszy „Rondo Żabczyńskiego” → most **E**.
 - Źródło `s2` mówi „nie znam związku” — to **nie** jest dowód, że związku nie ma. Fakt brzmi więc „nie wiadomo, by…”, a nie „nic go z tym miejscem nie łączy”.
-- Przypuszczenie o prestiżu to `domysl`. Wchodzi z jednego źródła tylko dlatego, że odpowiada na główne pytanie („dlaczego on?”), i z atrybucją.
-- Mordor to historia **okolicy**, nie tej nazwy → `warstwy_zapasowe`.
+- Przypuszczenie o prestiżu to `guess`. Wchodzi z jednego źródła tylko dlatego, że odpowiada na główne pytanie („dlaczego on?”), i z atrybucją.
+- Mordor to historia **okolicy**, nie tej nazwy → `spare_layers`.
 
 **Wyjście (skrót)**
 
 ```json
 {
-  "fakty": [
+  "facts": [
     {
       "id": "F1",
-      "tekst": "Nie wiadomo, by Aleksandra Żabczyńskiego coś łączyło z tym miejscem.",
-      "dowody": [{ "fragment": "s2#1", "cytat": "…" }],
-      "rodzaj": "fakt",
-      "pewnosc": "srednia",
-      "era": "po1989"
+      "text": "Nie wiadomo, by Aleksandra Żabczyńskiego coś łączyło z tym miejscem.",
+      "evidence": [{ "fragment_id": "s2#1", "quote": "…" }],
+      "kind": "fact",
+      "confidence": "medium",
+      "era": "after_1989"
     },
     {
       "id": "F2",
-      "tekst": "Lokalny autor przypuszcza, że nazwisko aktora miało dodać biurowej okolicy prestiżu.",
-      "dowody": [{ "fragment": "s2#1", "cytat": "…" }],
-      "rodzaj": "domysl",
-      "pewnosc": "srednia",
-      "era": "po1989"
+      "text": "Lokalny autor przypuszcza, że nazwisko aktora miało dodać biurowej okolicy prestiżu.",
+      "evidence": [{ "fragment_id": "s2#1", "quote": "…" }],
+      "kind": "guess",
+      "confidence": "medium",
+      "era": "after_1989"
     },
     {
       "id": "F5",
-      "tekst": "Po powrocie do Polski w 1946 r. Żabczyński był inwigilowany i nie zagrał już w żadnym filmie.",
-      "dowody": [{ "fragment": "s1#3", "cytat": "…" }],
-      "rodzaj": "fakt",
-      "pewnosc": "potwierdzony",
-      "era": "1945-1989"
+      "text": "Po powrocie do Polski w 1946 r. Żabczyński był inwigilowany i nie zagrał już w żadnym filmie.",
+      "evidence": [{ "fragment_id": "s1#3", "quote": "…" }],
+      "kind": "fact",
+      "confidence": "confirmed",
+      "era": "1945_1989"
     }
   ],
-  "historia": {
+  "story": {
     "status": "ok",
-    "os": "Największy amant przedwojennego kina, wymazany z ekranu po wojnie, ma rondo w środku biurowego Służewca.",
-    "pytanie_sluchacza": "Kim był Żabczyński i dlaczego rondo nosi jego imię?",
-    "most": {
-      "typ": "E",
-      "zdanie_robocze": "Słyszysz jego nazwisko w zapowiedzi, choć nie wiadomo, by coś go tu łączyło.",
-      "fakty": ["F1", "F2"]
+    "axis": "Największy amant przedwojennego kina, wymazany z ekranu po wojnie, ma rondo w środku biurowego Służewca.",
+    "listener_question": "Kim był Żabczyński i dlaczego rondo nosi jego imię?",
+    "bridge": {
+      "type": "E",
+      "draft": "Słyszysz jego nazwisko w zapowiedzi, choć nie wiadomo, by coś go tu łączyło.",
+      "fact_ids": ["F1", "F2"]
     },
-    "haczyk": {
-      "fakty": ["F4", "F5"],
-      "dlaczego_ten": "Kontrast amant–wojna–zakaz grania jest ciekawszy niż lista filmów."
+    "hook": {
+      "fact_ids": ["F4", "F5"],
+      "why": "Kontrast amant–wojna–zakaz grania jest ciekawszy niż lista filmów."
     },
-    "sposob_zmiany": "brak",
-    "wyjasnic": [{ "co": "kim był Aleksander Żabczyński", "fakt": "F3" }],
-    "ton": "neutralny",
-    "era": "1918-1939"
+    "change_mode": "none",
+    "explain": [{ "what": "kim był Aleksander Żabczyński", "fact_id": "F3" }],
+    "tone": "neutral",
+    "era": "1918_1939"
   },
-  "warstwy_zapasowe": [
-    { "os": "Od dzielnicy przemysłowej do Mordoru", "most_typ": "B", "fakty": ["F8", "F9"], "ton": "lekki" }
+  "spare_layers": [
+    { "axis": "Od dzielnicy przemysłowej do Mordoru", "bridge_type": "B", "fact_ids": ["F8", "F9"], "tone": "light" }
   ]
 }
 ```
@@ -179,73 +179,73 @@ Spis treści
 
 **Kluczowe decyzje**
 
-- Słowa dewelopera to `deklaracja` — wchodzą z atrybucją („deweloper wskazywał…”), nie jako fakt o pochodzeniu nazwy.
+- Słowa dewelopera to `claim` — wchodzą z atrybucją („deweloper wskazywał…”), nie jako fakt o pochodzeniu nazwy.
 - Kolej z 1862 r. jest faktem potwierdzonym niezależnie → to ona jest osią, deweloper to jedno zdanie (pośrednik).
-- Wilnaer Straße to prawdziwy fakt, ale żadne źródło nie mówi, że nazwa osiedla od niej pochodzi. Fakt zostaje, a wniosek „stąd nazwa” idzie do `odrzucone` z powodem `wniosek_ze_zbieznosci`.
-- Słuchacz może nie wiedzieć, czym jest Wilno → `wyjasnic`.
+- Wilnaer Straße to prawdziwy fakt, ale żadne źródło nie mówi, że nazwa osiedla od niej pochodzi. Fakt zostaje, a wniosek „stąd nazwa” idzie do `rejected` z powodem `coincidence_as_cause`.
+- Słuchacz może nie wiedzieć, czym jest Wilno → `explain`.
 
 **Wyjście (skrót)**
 
 ```json
 {
-  "fakty": [
+  "facts": [
     {
       "id": "F1",
-      "tekst": "Prezes dewelopera wskazywał, że osiedle Wilno nawiązuje do historycznej kolei z Warszawy do Wilna.",
-      "dowody": [{ "fragment": "s1#1", "cytat": "…" }],
-      "rodzaj": "deklaracja",
-      "pewnosc": "srednia",
-      "era": "po1989"
+      "text": "Prezes dewelopera wskazywał, że osiedle Wilno nawiązuje do historycznej kolei z Warszawy do Wilna.",
+      "evidence": [{ "fragment_id": "s1#1", "quote": "…" }],
+      "kind": "claim",
+      "confidence": "medium",
+      "era": "after_1989"
     },
     {
       "id": "F2",
-      "tekst": "Kolej z Petersburga do Warszawy, otwarta w 1862 r., biegła przez Wilno i kończyła się na dzisiejszym Dworcu Wileńskim.",
-      "dowody": [{ "fragment": "s2#1", "cytat": "…" }],
-      "rodzaj": "fakt",
-      "pewnosc": "potwierdzony",
-      "era": "1800-1918"
+      "text": "Kolej z Petersburga do Warszawy, otwarta w 1862 r., biegła przez Wilno i kończyła się na dzisiejszym Dworcu Wileńskim.",
+      "evidence": [{ "fragment_id": "s2#1", "quote": "…" }],
+      "kind": "fact",
+      "confidence": "confirmed",
+      "era": "1800_1918"
     },
     {
       "id": "F4",
-      "tekst": "W czasie okupacji Niemcy nazwali Radzymińską Wilnaer Straße.",
-      "dowody": [{ "fragment": "s4#1", "cytat": "…" }],
-      "rodzaj": "fakt",
-      "pewnosc": "srednia",
-      "era": "1939-1945"
+      "text": "W czasie okupacji Niemcy nazwali Radzymińską Wilnaer Straße.",
+      "evidence": [{ "fragment_id": "s4#1", "quote": "…" }],
+      "kind": "fact",
+      "confidence": "medium",
+      "era": "1939_1945"
     }
   ],
-  "odrzucone": [
+  "rejected": [
     {
-      "tekst": "Osiedle nazwano Wilno od niemieckiej nazwy Radzymińskiej.",
-      "fragmenty": ["s4#1"],
-      "powod": "wniosek_ze_zbieznosci",
-      "uwaga": "Żadne źródło nie łączy tych nazw."
+      "text": "Osiedle nazwano Wilno od niemieckiej nazwy Radzymińskiej.",
+      "fragment_ids": ["s4#1"],
+      "reason": "coincidence_as_cause",
+      "note": "Żadne źródło nie łączy tych nazw."
     }
   ],
-  "historia": {
+  "story": {
     "status": "ok",
-    "os": "Wilno na Targówku wzięło się z kolei do Petersburga, przy której zawraca autobus.",
-    "pytanie_sluchacza": "Skąd Wilno na Targówku?",
-    "most": {
-      "typ": "C",
-      "zdanie_robocze": "Tory, przy których jesteś, to fragment kolei, która biegła przez Wilno.",
-      "fakty": ["F2"]
+    "axis": "Wilno na Targówku wzięło się z kolei do Petersburga, przy której zawraca autobus.",
+    "listener_question": "Skąd Wilno na Targówku?",
+    "bridge": {
+      "type": "C",
+      "draft": "Tory, przy których jesteś, to fragment kolei, która biegła przez Wilno.",
+      "fact_ids": ["F2"]
     },
-    "sposob_zmiany": "lancuch",
-    "wyjasnic": [{ "co": "czym jest Wilno", "fakt": null }],
-    "ton": "lekki",
-    "era": "1800-1918"
+    "change_mode": "chain",
+    "explain": [{ "what": "czym jest Wilno", "fact_id": null }],
+    "tone": "light",
+    "era": "1800_1918"
   },
-  "braki": [
+  "gaps": [
     {
-      "czego": "1–2 zdania, czym jest Wilno (dziś stolica Litwy)",
-      "po_co": "krok wyjaśnienia dla słuchacza",
-      "gdzie_szukac": "Wikipedia — Wilno"
+      "what": "1–2 zdania, czym jest Wilno (dziś stolica Litwy)",
+      "why": "krok wyjaśnienia dla słuchacza",
+      "where": "Wikipedia — Wilno"
     },
     {
-      "czego": "numer i przebieg linii kolejowej przy stacji",
-      "po_co": "potwierdzenie, że stacja leży przy torach dawnej kolei",
-      "gdzie_szukac": "Wikipedia / OSM"
+      "what": "numer i przebieg linii kolejowej przy stacji",
+      "why": "potwierdzenie, że stacja leży przy torach dawnej kolei",
+      "where": "Wikipedia / OSM"
     }
   ]
 }

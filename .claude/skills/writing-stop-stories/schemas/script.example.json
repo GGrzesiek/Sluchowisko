@@ -1,0 +1,104 @@
+{
+  "group_id": "5003",
+  "title": "Okopowa",
+  "cast": "duet",
+  "tone": "light",
+  "target_duration_s": 45,
+  "lines": [
+    {
+      "id": "L1",
+      "voice": "narrator",
+      "role": "anchor",
+      "text": "Przystanek Okopowa.",
+      "fact_ids": [],
+      "delivery": "spokojnie, jak przewodnik, który zaczyna opowieść",
+      "pause_after_s": 0.2
+    },
+    {
+      "id": "L2",
+      "voice": "co_narrator",
+      "role": "anchor",
+      "text": "Skąd właściwie ta nazwa?",
+      "fact_ids": [],
+      "delivery": "z ciekawością",
+      "pause_after_s": 0.3
+    },
+    {
+      "id": "L3",
+      "voice": "narrator",
+      "role": "place_fact",
+      "text": "Z okopów. W 1770 roku marszałek Lubomirski kazał usypać wokół Warszawy wał z fosą. Z obawy przed dżumą.",
+      "fact_ids": ["F1"],
+      "delivery": null,
+      "pause_after_s": 0.3
+    },
+    {
+      "id": "L4",
+      "voice": "co_narrator",
+      "role": "place_fact",
+      "text": "Zaraza do Warszawy nie dotarła. Według Muzeum Warszawy miasto uratowała zima.",
+      "fact_ids": ["F2"],
+      "delivery": null,
+      "pause_after_s": 0.5
+    },
+    {
+      "id": "L5",
+      "voice": "narrator",
+      "role": "place_fact",
+      "text": "A ulica została. Okopowa i Towarowa biegną niemal dokładnie linią dawnego wału.",
+      "fact_ids": ["F4"],
+      "delivery": null,
+      "pause_after_s": 0.3
+    },
+    {
+      "id": "L6",
+      "voice": "narrator",
+      "role": "jump",
+      "text": "Przy rogatce w 1867 roku założono bazar. Kercelak.",
+      "fact_ids": ["F6"],
+      "delivery": "ciszej, z uśmiechem",
+      "pause_after_s": 1.8
+    },
+    {
+      "id": "L7",
+      "voice": "co_narrator",
+      "role": "return",
+      "text": "Po bazarze została dziś tylko nazwa ronda, które zaraz mijasz.",
+      "fact_ids": ["F7"],
+      "delivery": "ciepło",
+      "pause_after_s": 0
+    }
+  ],
+  "sounds": [
+    {
+      "id": "S1",
+      "kind": "motif",
+      "shape": "swell",
+      "description": "gwar dużego targu pod gołym niebem, nawoływania bez zrozumiałych słów, z oddali coraz bliżej",
+      "fact_ids": ["F6"],
+      "start": { "line_id": "L5", "edge": "end", "offset_s": 0 },
+      "end": { "line_id": "L7", "edge": "start", "offset_s": 0.8 }
+    }
+  ],
+  "music": null,
+  "text": [
+    {
+      "heading": "Wał, który hamował miasto",
+      "paragraphs": [
+        {
+          "sentences": [
+            {
+              "text": "Wał Lubomirskiego nie tylko chronił przed zarazą. Był też granicą celną.",
+              "fact_ids": ["F3"]
+            },
+            {
+              "text": "Ulica Okopowa biegła po jego wewnętrznej stronie.",
+              "fact_ids": ["F5"]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "image_ids": ["i1"]
+}

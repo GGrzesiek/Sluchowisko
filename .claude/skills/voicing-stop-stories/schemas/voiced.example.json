@@ -1,0 +1,42 @@
+{
+  "group_id": "5003",
+  "lines": [
+    { "id": "L1", "voice": "narrator", "tts_text": "[calm] Przystanek Okopowa." },
+    { "id": "L2", "voice": "co_narrator", "tts_text": "[curious] Skąd właściwie ta nazwa?" },
+    {
+      "id": "L3",
+      "voice": "narrator",
+      "tts_text": "Z okopów. W tysiąc siedemset siedemdziesiątym roku marszałek Lubomirski kazał usypać wokół Warszawy wał z fosą. Z obawy przed dżumą."
+    },
+    {
+      "id": "L4",
+      "voice": "co_narrator",
+      "tts_text": "Zaraza do Warszawy nie dotarła. Według Muzeum Warszawy… miasto uratowała zima."
+    },
+    {
+      "id": "L5",
+      "voice": "narrator",
+      "tts_text": "A ulica została. Okopowa i Towarowa biegną niemal dokładnie linią dawnego wału."
+    },
+    {
+      "id": "L6",
+      "voice": "narrator",
+      "tts_text": "[softly] Przy rogatce w tysiąc osiemset sześćdziesiątym siódmym roku założono bazar. Kercelak."
+    },
+    {
+      "id": "L7",
+      "voice": "co_narrator",
+      "tts_text": "[warm] Po bazarze została dziś tylko nazwa ronda, które zaraz mijasz."
+    }
+  ],
+  "sounds": [
+    {
+      "id": "S1",
+      "prompt": "Large open-air market in the 19th century, indistinct crowd murmur and distant calls of traders, no intelligible words, approaching from far to close, no music",
+      "duration_s": 12,
+      "loop": true
+    }
+  ],
+  "music": null,
+  "pronunciations": []
+}

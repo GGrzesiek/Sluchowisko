@@ -1,72 +1,81 @@
 {
-  "przystanek": { "zespol": "7010", "nazwa": "Książęca" },
+  "group_id": "5003",
+  "stop_name": "Okopowa",
+  "target_duration_s": 45,
 
-  "fakty": [
+  "facts": [
     {
       "id": "F1",
-      "tekst": "Jedno twierdzenie, po polsku, własnymi słowami.",
-      "dowody": [{ "fragment": "s1#1", "cytat": "dosłowny wycinek fragmentu s1#1" }],
-      "rodzaj": "fakt | deklaracja | wspomnienie | literatura | legenda | domysl",
-      "pewnosc": "potwierdzony | srednia",
-      "obiekt": "o1",
-      "era": "przed1800 | 1800-1918 | 1918-1939 | 1939-1945 | 1945-1989 | po1989"
+      "text": "Jedno twierdzenie, po polsku, własnymi słowami.",
+      "evidence": [{ "fragment_id": "s1#1", "quote": "dosłowny wycinek fragmentu s1#1" }],
+      "kind": "fact | claim | memory | literature | legend | guess",
+      "confidence": "confirmed | medium",
+      "object_id": "o1",
+      "era": "before_1800 | 1800_1918 | 1918_1939 | 1939_1945 | 1945_1989 | after_1989"
     }
   ],
 
-  "odrzucone": [
+  "rejected": [
     {
-      "tekst": "Co mogłoby kusić, ale nie wchodzi.",
-      "fragmenty": ["s7#2"],
-      "powod": "jedno_slabe_zrodlo | sensacja_bez_potwierdzenia | sprzecznosc | wniosek_ze_zbieznosci | deklaracja_jako_fakt | poza_miejscem | licencja | nieistotne",
-      "uwaga": "jedno zdanie"
+      "text": "Co mogłoby kusić, ale nie wchodzi.",
+      "fragment_ids": ["s7#2"],
+      "reason": "single_weak_source | unconfirmed_sensation | contradiction | coincidence_as_cause | claim_as_fact | off_site | licence | irrelevant",
+      "note": "jedno zdanie"
     }
   ],
 
-  "sprzecznosci": [
+  "contradictions": [
     {
-      "opis": "Źródła podają różne daty …",
-      "fakty": ["F3", "F8"],
-      "rozstrzygniecie": "F3 — źródło o wyższej wiarygodności | nierozstrzygniete"
+      "description": "Źródła podają różne daty …",
+      "fact_ids": ["F3", "F8"],
+      "resolution": "F3 — źródło o wyższej wiarygodności | unresolved"
     }
   ],
 
-  "kandydaci_osi": [{ "os": "jedno zdanie", "most_typ": "A | B | C | E | D", "uzasadnienie": "jedno zdanie" }],
+  "axis_candidates": [{ "axis": "jedno zdanie", "bridge_type": "A | B | C | E | D", "reason": "jedno zdanie" }],
 
-  "historia": {
-    "status": "ok | obszar | za_malo_materialu",
-    "os": "O czym jest historia — jedno zdanie.",
-    "pytanie_sluchacza": "Na jakie pytanie pasażera odpowiada?",
-    "most": { "typ": "A | B | C | E", "zdanie_robocze": "…", "fakty": ["F1"] },
-    "haczyk": { "fakty": ["F5"], "dlaczego_ten": "…" },
-    "sposob_zmiany": "dwa_glosy | plan | lancuch | slad | ludzie | brak",
-    "glos_epoki": {
-      "fakt": "F9",
-      "fragment": "s2#4",
-      "cytat": "dosłowny cytat z domeny publicznej",
-      "autor": "Bolesław Prus"
+  "story": {
+    "status": "ok | area | not_enough_material",
+    "axis": "O czym jest historia — jedno zdanie.",
+    "listener_question": "Na jakie pytanie pasażera odpowiada?",
+    "bridge": { "type": "A | B | C | E", "draft": "…", "fact_ids": ["F1"] },
+    "hook": { "fact_ids": ["F5"], "why": "…" },
+    "change_mode": "two_voices | plan | chain | trace | people | none",
+    "period_voice": {
+      "fact_id": "F9",
+      "fragment_id": "s2#4",
+      "quote": "dosłowny cytat z domeny publicznej",
+      "author": "Bolesław Prus"
     },
-    "kroki": [
-      { "rola": "kotwica", "fakty": [], "notatka": "…" },
-      { "rola": "fakt_o_miejscu", "fakty": ["F1", "F2"], "notatka": null },
-      { "rola": "wyjasnienie", "fakty": ["F4"], "notatka": null },
-      { "rola": "skok", "fakty": ["F5"], "notatka": null },
-      { "rola": "powrot", "fakty": ["F6"], "notatka": "…" }
+    "steps": [
+      { "role": "anchor", "fact_ids": [], "note": "…" },
+      { "role": "place_fact", "fact_ids": ["F1", "F2"], "note": null },
+      { "role": "explanation", "fact_ids": ["F4"], "note": null },
+      { "role": "jump", "fact_ids": ["F5"], "note": null },
+      { "role": "return", "fact_ids": ["F6"], "note": "…" }
     ],
-    "wyjasnic": [{ "co": "kim był …", "fakt": "F4" }],
-    "ton": "lekki | neutralny | podniosly | tragiczny",
-    "era": "1800-1918"
+    "explain": [{ "what": "kim był …", "fact_id": "F4" }],
+    "tone": "light | neutral | elevated | tragic",
+    "era": "1800_1918"
   },
 
-  "do_tekstu": [
-    { "naglowek_roboczy": "…", "fakty": ["F7", "F8", "F10"] },
-    { "naglowek_roboczy": "Czego nie wiemy", "fakty": ["F3"] }
+  "text_sections": [
+    { "draft_heading": "…", "fact_ids": ["F7", "F8", "F10"] },
+    { "draft_heading": "Czego nie wiemy", "fact_ids": ["F3"] }
   ],
 
-  "zdjecia": ["i2", "i1"],
+  "image_ids": ["i2", "i1"],
 
-  "braki": [
-    { "czego": "…", "po_co": "…", "gdzie_szukac": "uchwała nazewnicza | warszawa1939.pl | Wikidata | prasa | …" }
-  ],
+  "gaps": [{ "what": "…", "why": "…", "where": "uchwała nazewnicza | warszawa1939.pl | Wikidata | prasa | …" }],
 
-  "warstwy_zapasowe": [{ "os": "…", "most_typ": "A", "fakty": ["F11", "F12"], "ton": "tragiczny" }]
+  "spare_layers": [{ "axis": "…", "bridge_type": "A", "fact_ids": ["F11", "F12"], "tone": "tragic" }],
+
+  "fetch_log": [
+    {
+      "tool": "wikipedia | search | wikidata | warszawikia | url",
+      "query": "Kercelak",
+      "why": "fragment wspomina bazar bez szczegółów",
+      "result": "s14: Kercelak (6 fragmentów)"
+    }
+  ]
 }
