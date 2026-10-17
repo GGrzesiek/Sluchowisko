@@ -13,4 +13,4 @@ COPY stories stories
 
 RUN useradd --create-home app
 USER app
-CMD exec gunicorn config.wsgi --bind 0.0.0.0:${PORT} --workers 1 --threads 8 --timeout 60
+CMD exec daphne -b 0.0.0.0 -p ${PORT} config.asgi:application

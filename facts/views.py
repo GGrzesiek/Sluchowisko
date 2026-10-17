@@ -1,5 +1,4 @@
 from django.conf import settings
-from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
@@ -9,41 +8,8 @@ from transit.models import Stop, Vehicle
 from transit.services import refresh_vehicle
 from transit.warsaw_api import WarsawApiError
 
-from .models import Fact, SeenFact
-from .serializers import FactSerializer, StopSerializer, VehicleSerializer
-from .services import is_stale, upcoming_facts
-
-
-def _device_id(request):
-    # The frontend generates a random UUID once and sends it with every request
-    return request.headers.get("X-Device-Id") or request.query_params.get("device_id")
-
-
-@api_view(["GET"])
-def ride(request, vehicle_number):
-    """Main endpoint: the QR code opens /ride/<vehicle_number>, the app polls this every ~10 s."""
-    v = get_object_or_404(Vehicle, number=vehicle_number)
-    (lat, lon), items = upcoming_facts(v, _device_id(request), limit=int(request.query_params.get("limit", 5)))
-    return Response(
-        {
-            "vehicle": VehicleSerializer(v).data,
-            "stale": is_stale(v),
-            "estimated_position": {"lat": lat, "lon": lon},
-            "facts": [{**FactSerializer(f).data, "distance_m": d, "eta_s": eta} for f, d, eta in items],
-        }
-    )
-
-
-@api_view(["POST"])
-def mark_seen(request, fact_id):
-    device = _device_id(request)
-    if not device:
-        return Response({"detail": "X-Device-Id header required"}, status=status.HTTP_400_BAD_REQUEST)
-    fact = get_object_or_404(Fact, id=fact_id)
-    SeenFact.objects.get_or_create(
-        device_id=device, fact=fact, defaults={"vehicle_number": request.data.get("vehicle_number", "")}
-    )
-    return Response(status=status.HTTP_204_NO_CONTENT)
+from .serializers import StopSerializer, VehicleSerializer
+from .services import is_stale
 
 
 @api_view(["GET"])

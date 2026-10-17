@@ -38,12 +38,14 @@ ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "*").split(",")
 # Application definition
 
 INSTALLED_APPS = [
+    "daphne",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "channels",
     "rest_framework",
     "corsheaders",
     "transit",
@@ -80,6 +82,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "config.wsgi.application"
+ASGI_APPLICATION = "config.asgi.application"
 
 
 # Database
@@ -160,6 +163,7 @@ WARSAW_API_WORKERS = int(os.getenv("WARSAW_API_WORKERS", "6"))
 POC_LINE = os.getenv("POC_LINE", "17")
 POC_VEHICLE_TYPE = int(os.getenv("POC_VEHICLE_TYPE", "2"))  # 1 = bus, 2 = tram
 POLL_INTERVAL_SECONDS = int(os.getenv("POLL_INTERVAL_SECONDS", "10"))
+WS_PUSH_INTERVAL_SECONDS = int(os.getenv("WS_PUSH_INTERVAL_SECONDS", "10"))
 # Positions older than this are treated as stale (vehicle not in service / API lag)
 POSITION_MAX_AGE_SECONDS = 120
 CITY_API_LIVE = os.getenv("CITY_API_LIVE", "1") == "1"
