@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Button,
   LineBadge,
@@ -7,6 +7,7 @@ import {
   RouteStrip,
   StoryCard,
   StoryIcon,
+  UiIcon,
   StoryMarker,
   VehicleTag,
   PlayButton,
@@ -33,6 +34,7 @@ import {
   STORY_ICON_LABELS,
 } from "./components";
 import { PALETTE_DEFAULTS, applyTheme, resetTheme, type PaletteKey } from "./theme";
+import { SCREENS, findScreen, screenHash } from "./screens/registry";
 import type { RouteStop, StoryIconKind } from "./types";
 
 const STOPS: RouteStop[] = [
@@ -40,7 +42,7 @@ const STOPS: RouteStop[] = [
   { name: "Krucza", state: "passed" },
   { name: "Muzeum Narodowe", state: "passed" },
   { name: "Most Poniatowskiego", state: "current", hasStory: true },
-  { name: "Rondo Waszyngtona", state: "next", etaLabel: "2 MIN" },
+  { name: "Rondo Waszyngtona", state: "next", etaMinutes: 2 },
   { name: "Berezyńska", state: "next" },
 ];
 
@@ -60,6 +62,46 @@ function Section({
       <h2 className="m-0 text-[13px] font-extrabold uppercase tracking-[0.1em] text-umber">{title}</h2>
       {children}
     </section>
+  );
+}
+
+function ScreenIndex() {
+  return (
+    <Section title="Ekrany">
+      <ul className="m-0 grid list-none gap-3 p-0 sm:grid-cols-2 lg:grid-cols-3">
+        {SCREENS.map((screen) => (
+          <li key={screen.id}>
+            {screen.render ? (
+              <a
+                href={screenHash(screen.id)}
+                className="flex items-center gap-3 rounded-2xl bg-cream p-3.5 text-charcoal no-underline"
+              >
+                <ScreenNumber>{screen.number}</ScreenNumber>
+                <span className="grow text-base font-extrabold">{screen.title}</span>
+                <UiIcon name="chevron" size={18} />
+              </a>
+            ) : (
+              <div
+                aria-disabled="true"
+                className="flex items-center gap-3 rounded-2xl border-[1.5px] border-dashed border-road p-3.5 text-umber"
+              >
+                <ScreenNumber>{screen.number}</ScreenNumber>
+                <span className="grow text-base font-bold">{screen.title}</span>
+                <span className="font-mono text-[11px] font-semibold tracking-[0.06em]">WKRÓTCE</span>
+              </div>
+            )}
+          </li>
+        ))}
+      </ul>
+    </Section>
+  );
+}
+
+function ScreenNumber({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="font-condensed flex h-9 min-w-9 items-center justify-center rounded-[9px] bg-charcoal px-2 text-[22px] font-black text-cream">
+      {children}
+    </span>
   );
 }
 
@@ -95,12 +137,36 @@ function PaletteEditor() {
   );
 }
 
+function goHome() {
+  window.location.hash = "";
+}
+
 export function App() {
+  const hash = useHashRoute();
+  const screen = findScreen(hash);
+  if (screen?.render) {
+    return screen.render({ back: goHome, next: goHome });
+  }
+  return <Showcase />;
+}
+
+function useHashRoute() {
+  const [hash, setHash] = useState(window.location.hash);
+  useEffect(() => {
+    const update = () => setHash(window.location.hash);
+    window.addEventListener("hashchange", update);
+    return () => window.removeEventListener("hashchange", update);
+  }, []);
+  return hash;
+}
+
+function Showcase() {
   const [playing, setPlaying] = useState(true);
   return (
     <main className="min-h-screen bg-puff p-4 text-charcoal sm:p-10">
       <div className="mx-auto flex max-w-6xl flex-col gap-6">
         <h1 className="m-0 text-3xl font-extrabold">Muzeum w autobusie · komponenty</h1>
+        <ScreenIndex />
         <PaletteEditor />
         <div className="grid gap-6 lg:grid-cols-3">
           <Section title="Numer linii">
