@@ -1,7 +1,29 @@
 import { render, screen } from "@testing-library/react";
-import { BusAnimation, LineBadge, NowPlayingBar, RouteStrip, StoryCard } from ".";
+import { BusAnimation, ErrorBanner, LineBadge, NowPlayingBar, RouteStrip, StoryCard } from ".";
 
 describe("components", () => {
+  it("tells the passenger the story goes on while the vehicle position is lost", () => {
+    render(<ErrorBanner error={{ kind: "positionLost", line: "180", lastStop: "Stare Miasto" }} />);
+    expect(screen.getByRole("status")).toHaveTextContent("Łączymy ponownie…");
+    expect(screen.getByRole("status")).toHaveTextContent("Historia gra dalej. Przystanki mogą się chwilę spóźniać.");
+    expect(screen.getByRole("img", { name: "Autobus 180" })).toBeInTheDocument();
+    expect(screen.getByText("Ostatni znany przystanek: Stare Miasto")).toBeInTheDocument();
+  });
+
+  it("leaves out the last stop when none is known yet", () => {
+    render(<ErrorBanner error={{ kind: "positionLost" }} />);
+    expect(screen.queryByText(/Ostatni znany przystanek/)).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ["offline", "Brak internetu"],
+    ["dataUnavailable", "Nie udało się wczytać danych"],
+    ["unexpected", "Coś poszło nie tak"],
+  ] as const)("names the %s error", (kind, title) => {
+    render(<ErrorBanner error={{ kind }} />);
+    expect(screen.getByRole("status")).toHaveTextContent(title);
+  });
+
   it("describes the bus animation for assistive tech", () => {
     render(<BusAnimation />);
     expect(screen.getByRole("img", { name: "Animacja: ogórek jedzie przez ekran" })).toBeInTheDocument();
