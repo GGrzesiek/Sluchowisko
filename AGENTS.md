@@ -33,7 +33,11 @@ open sources ─▶ facts with sources ─▶ stories ─▶ verifier ─▶ voi
 
 - **The app never calls an LLM.** Stories are written during development only and stored as static files. No model API
   key in the app, no generation at runtime (#3).
-- The app reads only static files and must work offline in the hall (#15).
+- Two modes:
+  - **Demo** (the recorded demo, the hall): the app reads only static files and must work offline (#15, #17).
+  - **Live**: the app asks our back end on Cloud Run where the vehicle is and which stops come next. The back end calls
+    the city API on request and caches the answer for 10 s (#83, #84).
+  - Stories, audio and images are static files in both modes.
 - **One story per stop group** (zespół przystankowy: all poles with the same name at one junction). The same recording
   plays whatever the line or direction.
 - Each stop gets:
@@ -154,7 +158,8 @@ These apply to anything that collects, writes, checks or displays story content.
 
 - Talk to teammates in Polish. Code, commits and PRs stay in English.
 - Start from the issue. Link it in the PR (`Closes #12`).
-- Do not add LLM calls, analytics or live network calls to the app.
+- Do not add LLM calls or analytics to the app. Its only network call is live mode asking our own back end; the app
+  never calls the city API or any other service directly.
 - Do not guess API fields. Look at a real (cached) response first.
 - Keep PRs small and inside your area. Run the formatters before pushing.
 - If a decision in this file looks outdated, say so and propose an update in a PR. Do not quietly work around it.
