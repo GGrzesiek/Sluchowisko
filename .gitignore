@@ -17,9 +17,12 @@ _site/
 .idea/
 .vscode/
 
+*:Zone.Identifier
 .terraform/
 *.tfstate
 *.tfstate.*
 *.tfvars
 !*.tfvars.example
 tfplan
+db.sqlite3
+*.sqlite3
