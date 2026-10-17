@@ -10,21 +10,20 @@ How:
 2. project the vehicle onto that path -> distance travelled along the route;
 3. stops behind = passed, the stop at/just behind = current, the next 3 = next, the rest = upcoming;
 4. ETA = remaining distance along the route / average speed (instant speed is useless at a red light);
-5. hasStory = an approved fact has a place within STORY_RADIUS_M of the stop.
+5. hasStory = the stop group has a verified story.
 """
 
 import math
 
+from stories.models import Story
 from transit.geo import angle_diff, bearing_deg, haversine_m
 from transit.models import Route, Vehicle
 
-from .models import Place
 from .services import estimate_position
 
 NEXT_COUNT = 3  # how many stops are "next" (the rest are "upcoming")
 AT_STOP_M = 100  # this close to the following stop = we are "at" it already
 AVG_SPEED_MPS = 5.0  # ~18 km/h: typical Warsaw tram/bus average including stops
-STORY_RADIUS_M = 250  # a place this close to a stop gives the stop a story
 WRONG_WAY_PENALTY_M = 1000  # route pointing against the vehicle's heading
 
 
@@ -81,13 +80,12 @@ def pick_route(v: Vehicle, lat: float, lon: float):
 
 
 def _stops_with_stories(stops) -> set[int]:
-    """Stop ids that have at least one approved fact within STORY_RADIUS_M."""
-    places = list(Place.objects.filter(facts__approved=True).distinct().values_list("lat", "lon"))
-    if not places:
-        return set()
-    return {
-        s.pk for s in stops if any(haversine_m(s.lat, s.lon, plat, plon) <= STORY_RADIUS_M for plat, plon in places)
-    }
+    groups = set(
+        Story.objects.filter(status=Story.Status.VERIFIED, group_id__in={s.zespol for s in stops}).values_list(
+            "group_id", flat=True
+        )
+    )
+    return {s.pk for s in stops if s.zespol in groups}
 
 
 def build_ride_info(v: Vehicle) -> dict:
@@ -106,7 +104,7 @@ def build_ride_info(v: Vehicle) -> dict:
 
     out = []
     for idx, s in enumerate(stops):
-        item = {"name": s.name}
+        item = {"name": s.name, "groupId": s.zespol}
         if idx < current:
             item["state"] = "passed"
         elif idx == current:
