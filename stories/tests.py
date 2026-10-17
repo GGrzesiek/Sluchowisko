@@ -3,7 +3,6 @@ import json
 import tempfile
 from io import StringIO
 from pathlib import Path
-from unittest.mock import patch
 from unittest.mock import MagicMock, patch
 
 from django.core.management import CommandError, call_command
