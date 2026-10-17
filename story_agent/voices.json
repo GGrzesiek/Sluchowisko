@@ -1,0 +1,8 @@
+{
+  "model_id": "eleven_v3",
+  "voices": {
+    "narrator": { "voice_id": "JBFqnCBsd6RMkjVDRZzb", "name": "George" },
+    "co_narrator": { "voice_id": "Xb7hH8MSUJpSbSDYk0k2", "name": "Alice" },
+    "archive": { "voice_id": "onwK4e9ZLuTAKqWW03F9", "name": "Daniel" }
+  }
+}
