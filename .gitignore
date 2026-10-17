@@ -16,3 +16,10 @@ _site/
 .DS_Store
 .idea/
 .vscode/
+
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+tfplan
