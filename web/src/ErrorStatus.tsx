@@ -2,6 +2,8 @@ import { Component, createContext, useContext, useEffect, useMemo, useState, typ
 import { Button, ErrorBanner } from "./components";
 import { mostImportantError, type ActiveErrors, type AppError, type AppErrorKind } from "./errors";
 
+export const BANNER_VISIBLE_MS = 3000;
+
 interface ErrorActions {
   report: (error: AppError) => void;
   resolve: (kind: AppErrorKind) => void;
@@ -15,19 +17,29 @@ export function useAppErrors(): ErrorActions {
   return actions;
 }
 
+const bannerKey = (error: AppError) => JSON.stringify(error);
+
 export function ErrorStatusProvider({ children }: { children: ReactNode }) {
   const [errors, setErrors] = useState<ActiveErrors>(() => (navigator.onLine ? {} : { offline: { kind: "offline" } }));
+  const [seen, setSeen] = useState<Partial<Record<AppErrorKind, string>>>({});
 
   const actions = useMemo<ErrorActions>(
     () => ({
       report: (error) => setErrors((current) => ({ ...current, [error.kind]: error })),
-      resolve: (kind) =>
+      resolve: (kind) => {
         setErrors((current) => {
           if (!current[kind]) return current;
           const next = { ...current };
           delete next[kind];
           return next;
-        }),
+        });
+        setSeen((current) => {
+          if (!current[kind]) return current;
+          const next = { ...current };
+          delete next[kind];
+          return next;
+        });
+      },
     }),
     [],
   );
@@ -44,13 +56,21 @@ export function ErrorStatusProvider({ children }: { children: ReactNode }) {
   }, [actions]);
 
   const shown = mostImportantError(errors);
+  const key = shown && bannerKey(shown);
+  const visible = shown !== undefined && (shown.kind === "unexpected" || seen[shown.kind] !== key);
+
+  useEffect(() => {
+    if (!shown || !key || !visible || shown.kind === "unexpected") return;
+    const timer = setTimeout(() => setSeen((current) => ({ ...current, [shown.kind]: key })), BANNER_VISIBLE_MS);
+    return () => clearTimeout(timer);
+  }, [shown, key, visible]);
 
   return (
     <ErrorActionsContext.Provider value={actions}>
       <div className="flex min-h-dvh flex-col">
-        {shown && (
-          <div className="sticky top-0 z-10 bg-paper">
-            <div className="mx-auto max-w-[430px] px-4 pt-[calc(16px+env(safe-area-inset-top))] pb-2">
+        {visible && shown && (
+          <div className="pointer-events-none fixed inset-x-0 top-0 z-30">
+            <div className="animate-fade-in mx-auto max-w-[430px] px-4 pt-[calc(16px+env(safe-area-inset-top))] drop-shadow-lg">
               <ErrorBanner error={shown} />
             </div>
           </div>
@@ -79,7 +99,7 @@ class CrashBoundary extends Component<{ children: ReactNode }, { crashed: boolea
   render() {
     if (!this.state.crashed) return this.props.children;
     return (
-      <main className="mx-auto flex w-full max-w-[430px] flex-col px-6 pt-6">
+      <main className="mx-auto flex w-full max-w-[430px] flex-col justify-end px-6 pb-14">
         <Button onClick={() => window.location.assign(window.location.pathname)}>Zacznij od nowa</Button>
       </main>
     );
