@@ -1,0 +1,26 @@
+@import "@fontsource-variable/archivo/wdth.css";
+@import "@fontsource-variable/newsreader/opsz.css";
+@import "@fontsource/ibm-plex-mono/500.css";
+@import "@fontsource/ibm-plex-mono/600.css";
+@import "tailwindcss";
+@import "./theme.css";
+
+@layer base {
+  body {
+    margin: 0;
+    background: var(--color-paper);
+    color: var(--color-charcoal);
+    font-family: var(--font-sans);
+  }
+}
+
+@utility font-condensed {
+  font-stretch: 75%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-ping-soft,
+  .animate-beat {
+    animation: none;
+  }
+}
