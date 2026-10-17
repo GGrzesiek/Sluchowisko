@@ -1,12 +1,10 @@
-import { useState } from "react";
-import { flushSync } from "react-dom";
 import { App } from "./App";
 import { FindVehicle, LiveJourney, LiveVehicleFound } from "./liveRide";
-import { screenFromUrl, type Screen } from "./navigation";
 import { ManualEntryScreen } from "./screens/ManualEntryScreen";
 import { QrScannerScreen } from "./screens/QrScannerScreen";
 import { RideDeadEndScreen } from "./screens/RideDeadEndScreen";
 import { StartScreen } from "./screens/StartScreen";
+import { useScreenHistory } from "./useScreenHistory";
 
 export function isDebugPath(pathname: string): boolean {
   return pathname.replace(/\/+$/, "").endsWith("/debug");
@@ -19,14 +17,7 @@ export function ScreenSwitcher() {
 }
 
 function CurrentScreen() {
-  const [screen, setScreen] = useState<Screen>(() => screenFromUrl(window.location.search));
-
-  const goTo = (next: Screen) => {
-    if (next.name === "start" && window.location.search) {
-      window.history.replaceState(null, "", window.location.pathname);
-    }
-    flushSync(() => setScreen(next));
-  };
+  const { screen, goTo, goBack } = useScreenHistory();
   const goToStart = () => goTo({ name: "start" });
 
   switch (screen.name) {
@@ -40,14 +31,14 @@ function CurrentScreen() {
     case "vehicleNumber":
       return (
         <ManualEntryScreen
-          onBack={goToStart}
+          onBack={goBack}
           onSubmit={(vehicle) => goTo({ name: "findingVehicle", ride: { vehicle } })}
         />
       );
     case "qrScanner":
       return (
         <QrScannerScreen
-          onBack={goToStart}
+          onBack={goBack}
           onRideFound={(ride) => goTo({ name: "findingVehicle", ride })}
           onEnterVehicleNumber={() => goTo({ name: "vehicleNumber" })}
         />
@@ -56,9 +47,11 @@ function CurrentScreen() {
       return (
         <FindVehicle
           ride={screen.ride}
-          onFound={(info) => goTo({ name: "vehicleFound", info })}
-          onDeadEnd={(problem, line) => goTo({ name: "deadEnd", problem, vehicle: screen.ride.vehicle, line })}
-          onCancel={goToStart}
+          onFound={(info) => goTo({ name: "vehicleFound", info }, { replace: true })}
+          onDeadEnd={(problem, line) =>
+            goTo({ name: "deadEnd", problem, vehicle: screen.ride.vehicle, line }, { replace: true })
+          }
+          onCancel={goBack}
         />
       );
     case "vehicleFound":

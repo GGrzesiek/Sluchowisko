@@ -62,12 +62,12 @@ describe("ScreenSwitcher", () => {
     expect(screen.queryByRole("button", { name: "Wpisz numer boczny pojazdu" })).not.toBeInTheDocument();
   });
 
-  it("leads from the start screen to manual entry and to the scanner", () => {
+  it("leads from the start screen to manual entry and to the scanner", async () => {
     openAt("/");
     fireEvent.click(screen.getByRole("button", { name: "Wpisz numer boczny pojazdu" }));
     expect(screen.getByRole("heading", { name: "Którym autobusem lub tramwajem jedziesz?" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Wstecz" }));
-    fireEvent.click(screen.getByRole("button", { name: "Zeskanuj kod QR" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Zeskanuj kod QR" }));
     expect(screen.getByRole("heading", { name: "Zeskanuj kod z naklejki" })).toBeInTheDocument();
   });
 });

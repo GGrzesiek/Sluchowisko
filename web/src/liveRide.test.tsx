@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { ErrorStatusProvider } from "./ErrorStatus";
-import { REFRESH_MS } from "./liveRide";
 import { ScreenSwitcher } from "./ScreenSwitcher";
+import { FakeWebSocket } from "./test-setup";
 
 vi.mock("qr-scanner", () => ({
   default: vi.fn(function () {
@@ -21,9 +21,7 @@ function ride(current: string) {
   };
 }
 
-function answer(status: number, body: unknown) {
-  vi.mocked(fetch).mockResolvedValueOnce(new Response(JSON.stringify(body), { status }));
-}
+const socket = () => FakeWebSocket.instances[FakeWebSocket.instances.length - 1];
 
 function openRide() {
   window.history.replaceState(null, "", "/?line=22&vehicle=3122");
@@ -40,65 +38,97 @@ describe("live ride", () => {
     vi.useRealTimers();
   });
 
-  it("shows the vehicle's real route once the backend answers", async () => {
-    answer(200, ride("Okopowa"));
+  it("connects a WebSocket for the vehicle", () => {
     openRide();
+    expect(socket().url).toMatch(/\/ws\/ride\/3122\/\?device_id=.+/);
+  });
+
+  it("shows the vehicle's real route once the backend pushes it", async () => {
+    openRide();
+    act(() => socket().receive("route", ride("Okopowa")));
     expect(await screen.findByText("→ Wiatraczna")).toBeInTheDocument();
     expect(screen.getByRole("img", { name: /teraz Okopowa/ })).toBeInTheDocument();
   });
 
-  it("refreshes the route every 10 seconds", async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    answer(200, ride("Okopowa"));
-    answer(200, ride("Wola"));
+  it("updates the route when the backend pushes a new one", async () => {
     openRide();
+    act(() => socket().receive("route", ride("Okopowa")));
     await screen.findByText("→ Wiatraczna");
-    await act(() => vi.advanceTimersByTimeAsync(REFRESH_MS));
+    act(() => socket().receive("route", ride("Wola")));
     expect(screen.getByRole("img", { name: /teraz Wola/ })).toBeInTheDocument();
   });
 
-  it("keeps the last route and shows a banner when a refresh fails", async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    answer(200, ride("Okopowa"));
-    answer(503, { code: "no_live_data" });
+  it("keeps the last route and shows a banner when the backend loses the position", async () => {
     openRide();
+    act(() => socket().receive("route", ride("Okopowa")));
     await screen.findByText("→ Wiatraczna");
-    await act(() => vi.advanceTimersByTimeAsync(REFRESH_MS));
+    act(() => socket().receive("error", { code: "no_live_data" }));
     expect(screen.getByText("Łączymy ponownie…")).toBeInTheDocument();
     expect(screen.getByRole("img", { name: /teraz Okopowa/ })).toBeInTheDocument();
   });
 
-  it("says when the vehicle is not on the road", async () => {
-    answer(404, { code: "vehicle_not_found" });
+  it("reconnects after the connection drops and recovers", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
     openRide();
+    act(() => socket().receive("route", ride("Okopowa")));
+    await screen.findByText("→ Wiatraczna");
+    const first = socket();
+    act(() => first.drop());
+    expect(screen.getByText("Łączymy ponownie…")).toBeInTheDocument();
+    await act(() => vi.advanceTimersByTimeAsync(1_000));
+    expect(FakeWebSocket.instances).toHaveLength(3);
+    act(() => socket().receive("route", ride("Wola")));
+    expect(screen.queryByText("Łączymy ponownie…")).not.toBeInTheDocument();
+    expect(screen.getByRole("img", { name: /teraz Wola/ })).toBeInTheDocument();
+  });
+
+  it("says when the vehicle is not on the road", async () => {
+    openRide();
+    act(() => socket().receive("error", { code: "vehicle_not_found" }));
     expect(await screen.findByRole("heading", { name: "Nie widzimy pojazdu 3122" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Wpisz inny numer" }));
     expect(screen.getByLabelText("Numer boczny pojazdu")).toBeInTheDocument();
   });
 
   it("says when the line has no stories yet", async () => {
-    answer(404, { code: "no_route", line: "999" });
     openRide();
+    act(() => socket().receive("error", { code: "no_route", line: "999" }));
     expect(
       await screen.findByRole("heading", { name: "Nie mamy jeszcze historii dla linii 999." }),
     ).toBeInTheDocument();
   });
 
-  it("keeps searching while there is no live data, then moves on", async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    answer(503, { code: "no_live_data" });
-    answer(200, ride("Okopowa"));
+  it("keeps waiting while there is no live data, then moves on", async () => {
     openRide();
+    act(() => socket().receive("error", { code: "no_live_data" }));
     expect(await screen.findByText("Łączymy ponownie…")).toBeInTheDocument();
-    await act(() => vi.advanceTimersByTimeAsync(REFRESH_MS));
+    act(() => socket().receive("route", ride("Okopowa")));
     expect(await screen.findByText("→ Wiatraczna")).toBeInTheDocument();
     expect(screen.queryByText("Łączymy ponownie…")).not.toBeInTheDocument();
   });
 
-  it("stops asking the backend after the ride is cancelled", async () => {
+  it("ignores garbage from the server", () => {
+    openRide();
+    act(() => socket().onmessage?.({ data: "not json" }));
+    act(() => socket().onmessage?.({ data: new ArrayBuffer(1) }));
+    act(() => socket().receive("route", { nope: true }));
+    expect(screen.queryByText("→ Wiatraczna")).not.toBeInTheDocument();
+  });
+
+  it("closes the socket after the ride is cancelled", () => {
     openRide();
     fireEvent.click(screen.getByRole("button", { name: "Anuluj" }));
-    const signal = vi.mocked(fetch).mock.calls[0][1]?.signal;
-    expect(signal?.aborted).toBe(true);
+    expect(socket().closed).toBe(true);
+  });
+
+  it("pings the server and reconnects when it does not answer", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    openRide();
+    const first = socket();
+    act(() => first.open());
+    await act(() => vi.advanceTimersByTimeAsync(20_000));
+    expect(first.sent).toEqual([JSON.stringify({ type: "ping" })]);
+    await act(() => vi.advanceTimersByTimeAsync(10_000));
+    expect(first.closed).toBe(true);
   });
 });
