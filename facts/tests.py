@@ -1,4 +1,5 @@
 from datetime import timedelta
+from io import StringIO
 from unittest.mock import MagicMock, patch
 
 import requests
@@ -140,7 +141,7 @@ class LiveRideStopsTest(TestCase):
         ingest_readings([live("3122", "22", 52.2461, 20.9860, seconds_ago=3600)])
         fetch.side_effect = WarsawApiError("down")
         r = self.client.get("/api/ride/3122/stops/")
-        self.assertEqual((r.status_code, r.json()["code"]), (502, "city_api"))
+        self.assertEqual((r.status_code, r.json()["code"]), (503, "no_live_data"))
 
     @patch("transit.services.fetch_vehicle_positions", side_effect=WarsawApiError("down"))
     def test_failure_is_cached_so_city_api_is_not_hammered(self, fetch):
@@ -152,6 +153,70 @@ class LiveRideStopsTest(TestCase):
     def test_health_reports_city_api_down(self, fetch):
         r = self.client.get("/api/health/")
         self.assertEqual((r.status_code, r.json()), (503, {"db": True, "city_api": False}))
+
+
+@override_settings(CITY_API_LIVE=False)
+class FedRideStopsTest(LiveRideStopsTest):
+    @patch("transit.services.fetch_vehicle_positions")
+    def test_returns_ride_info_and_caches_city_feed(self, fetch):
+        ingest_readings([live("3122", "22", 52.2461, 20.9860)])
+        r = self.client.get("/api/ride/3122/stops/")
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json()["destination"], "Wiatraczna")
+        fetch.assert_not_called()
+
+    @patch("transit.services.fetch_vehicle_positions")
+    def test_line_without_route(self, fetch):
+        ingest_readings([live("1000", "999", 52.20, 21.00)])
+        r = self.client.get("/api/ride/1000/stops/")
+        self.assertEqual((r.status_code, r.json()["code"]), (404, "no_route"))
+
+    @patch("transit.services.fetch_vehicle_positions")
+    def test_city_api_down(self, fetch):
+        r = self.client.get("/api/ride/3122/stops/")
+        self.assertEqual((r.status_code, r.json()["code"]), (404, "vehicle_not_found"))
+        fetch.assert_not_called()
+
+    @patch("transit.services.fetch_vehicle_positions")
+    def test_falls_back_to_recent_position_when_city_api_fails(self, fetch):
+        ingest_readings([live("3122", "22", 52.2461, 20.9860, seconds_ago=20)])
+        self.assertEqual(self.client.get("/api/ride/3122/stops/").status_code, 200)
+
+    @patch("transit.services.fetch_vehicle_positions")
+    def test_stale_position_is_not_served_when_city_api_fails(self, fetch):
+        ingest_readings([live("3122", "22", 52.2461, 20.9860, seconds_ago=3600)])
+        r = self.client.get("/api/ride/3122/stops/")
+        self.assertEqual((r.status_code, r.json()["code"]), (503, "no_live_data"))
+
+    @patch("transit.services.fetch_vehicle_positions")
+    def test_failure_is_cached_so_city_api_is_not_hammered(self, fetch):
+        self.client.get("/api/ride/3122/stops/")
+        fetch.assert_not_called()
+
+    @patch("transit.services.fetch_vehicle_positions")
+    def test_health(self, fetch):
+        r = self.client.get("/api/health/")
+        self.assertEqual((r.status_code, r.json()), (200, {"db": True}))
+        fetch.assert_not_called()
+
+    @patch("transit.services.fetch_vehicle_positions")
+    def test_health_reports_city_api_down(self, fetch):
+        self.test_health()
+
+
+class PollVehiclesTest(TestCase):
+    @patch("transit.management.commands.poll_vehicles.fetch_vehicle_positions")
+    def test_stores_only_requested_lines(self, fetch):
+        fetch.side_effect = lambda vehicle_type=2, **_: (
+            [live("3122", "22", 52.2461, 20.9860), live("3300", "17", 52.2, 21.0)] if vehicle_type == 2 else []
+        )
+        call_command("poll_vehicles", "--line", "22", "--once", stdout=StringIO())
+        self.assertEqual(list(Vehicle.objects.values_list("number", flat=True)), ["3122"])
+
+    def test_demo_lines_come_from_data_file(self):
+        from transit.management.commands.poll_vehicles import demo_lines
+
+        self.assertEqual(demo_lines(), {"22", "18", "179", "169", "117"})
 
 
 class FetchAttemptsTest(TestCase):

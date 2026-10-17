@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.decorators import api_view
@@ -74,16 +75,20 @@ def nearby_stops(request):
 def ride_stops(request, vehicle_number):
     from .ride_progress import NoRouteError, build_ride_info
 
-    try:
-        found = refresh_vehicle(vehicle_number)
-    except WarsawApiError:
-        known = Vehicle.objects.filter(number=vehicle_number).first()
-        found = known is not None and not is_stale(known)
-        if not found:
+    city_api_failed = False
+    if settings.CITY_API_LIVE:
+        try:
+            refresh_vehicle(vehicle_number)
+        except WarsawApiError:
+            city_api_failed = True
+    vehicle = Vehicle.objects.filter(number=vehicle_number).first()
+    if vehicle is None:
+        if city_api_failed:
             return Response({"code": "city_api"}, status=status.HTTP_502_BAD_GATEWAY)
-    if not found:
         return Response({"code": "vehicle_not_found"}, status=status.HTTP_404_NOT_FOUND)
+    if is_stale(vehicle):
+        return Response({"code": "no_live_data"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
     try:
-        return Response(build_ride_info(Vehicle.objects.get(number=vehicle_number)))
+        return Response(build_ride_info(vehicle))
     except NoRouteError:
         return Response({"code": "no_route"}, status=status.HTTP_404_NOT_FOUND)
