@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "transit",
     "facts",
+    "stories",
 ]
 
 MIDDLEWARE = [
@@ -153,6 +154,7 @@ POLL_INTERVAL_SECONDS = int(os.getenv("POLL_INTERVAL_SECONDS", "10"))
 POSITION_MAX_AGE_SECONDS = 120
 # How far around the vehicle we look for facts (metres)
 FACT_RADIUS_M = int(os.getenv("FACT_RADIUS_M", "400"))
+STORIES_WRITE_TOKEN = os.getenv("STORIES_WRITE_TOKEN", "").strip()
 
 REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.AllowAny"],
