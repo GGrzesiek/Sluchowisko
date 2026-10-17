@@ -56,16 +56,13 @@ The owner passes the stories token to whoever runs the stories agent privately, 
 
 Database migrations are run by hand from a laptop (see Connecting), not by the deploy.
 
-The city servers (`dane.um.warszawa.pl`, `api.um.warszawa.pl`, `wms.um.warszawa.pl`) time out from Google Cloud
-(checked from Cloud Shell, 2026-10-17), so the backend runs with `CITY_API_LIVE=0` and only reads positions from the
-database. A laptop feeds them while live mode is needed:
+The city servers (`dane.um.warszawa.pl`, `api.um.warszawa.pl`, `wms.um.warszawa.pl`) answer only from Polish IP
+addresses: from Cloud Shell (Netherlands) and GitHub Actions (USA) they time out, from Cloud Run in `europe-central2`
+(Warsaw) they answer in under 0.5 s (checked 2026-10-17). The backend therefore runs in `europe-central2` with
+`CITY_API_LIVE=1` and the ZTM key from Secret Manager (`ztm-api-key`): each ride request fetches positions itself,
+cached for 10 s. Keep the service in a Polish region.
 
-```bash
-cloud-sql-proxy --auto-iam-authn muzeum-w-autobusie-2026:europe-central2:muzeum
-python manage.py poll_vehicles --demo
-```
-
-Without the feeder the API answers `503 {"code": "no_live_data"}`; demo mode in the app does not need it.
+`python manage.py poll_vehicles --demo` still works from a laptop, for local development or as a fallback.
 
 ## Who can do what
 

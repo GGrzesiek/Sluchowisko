@@ -4,6 +4,7 @@ locals {
   backend_secrets = {
     SECRET_KEY          = "django-secret-key"
     STORIES_WRITE_TOKEN = "stories-write-token"
+    ZTM_API_KEY         = "ztm-api-key"
   }
 }
 
@@ -90,7 +91,7 @@ resource "google_cloud_run_v2_service" "backend" {
 
       env {
         name  = "CITY_API_LIVE"
-        value = "0"
+        value = "1"
       }
 
       env {
