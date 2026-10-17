@@ -50,10 +50,10 @@
 
   --animate-ping-soft: ping-soft 1.8s ease-out infinite;
   --animate-beat: beat 1.8s ease-in-out infinite;
-  --animate-drive: drive 5.5s linear infinite;
+  --animate-drive: drive 5.4s linear infinite;
   --animate-rattle: rattle 0.5s ease-in-out infinite;
   --animate-wheel: wheel 0.55s linear infinite;
-  --animate-puff: puff 2.1s ease-out infinite;
+  --animate-puff: puff 5.4s ease-out infinite;
   --animate-road: road 0.55s linear infinite;
 
   @keyframes drive {
@@ -90,15 +90,16 @@
       background-color: #a8a49c;
       opacity: 0;
     }
-    12% {
+    4.7% {
       transform: translate(calc(var(--dx) * 0.12), calc(var(--dy) * 0.1)) scale(0.8) rotate(20deg);
       opacity: 0.4;
     }
-    50% {
+    19.4% {
       transform: translate(calc(var(--dx) * 0.5), calc(var(--dy) * 0.6)) scale(calc(var(--grow) * 0.6)) rotate(70deg);
       background-color: #cbc8c0;
       opacity: 0.25;
     }
+    38.9%,
     100% {
       transform: translate(var(--dx), var(--dy)) scale(var(--grow)) rotate(150deg);
       background-color: var(--color-puff);

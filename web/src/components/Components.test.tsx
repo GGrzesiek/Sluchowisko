@@ -63,7 +63,8 @@ describe("components", () => {
       state: i < 20 ? ("passed" as const) : i === 20 ? ("current" as const) : ("next" as const),
     }));
     render(<RouteStrip stops={stops} before={3} after={2} />);
-    expect(screen.getAllByText(/^Stop \d+$/).map((e) => e.textContent)).toEqual([
+    const visible = screen.getAllByText(/^Stop \d+$/).filter((e) => !e.closest('[aria-hidden="true"]'));
+    expect(visible.map((e) => e.textContent)).toEqual([
       "Stop 17",
       "Stop 18",
       "Stop 19",
@@ -71,5 +72,15 @@ describe("components", () => {
       "Stop 21",
       "Stop 22",
     ]);
+  });
+
+  it("keeps stops that are sliding in or out in the page, hidden", () => {
+    const stops = Array.from({ length: 50 }, (_, i) => ({
+      name: `Stop ${i}`,
+      state: i < 20 ? ("passed" as const) : i === 20 ? ("current" as const) : ("next" as const),
+    }));
+    render(<RouteStrip stops={stops} before={3} after={2} />);
+    const hidden = screen.getAllByText(/^Stop \d+$/).filter((e) => e.closest('[aria-hidden="true"]'));
+    expect(hidden.map((e) => e.textContent)).toEqual(["Stop 16", "Stop 23"]);
   });
 });

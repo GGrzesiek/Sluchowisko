@@ -85,6 +85,23 @@ const PUFFS = [
   },
 ];
 
+const LOOP_S = 5.4;
+const PUFF_EVERY_S = 0.3;
+const BUS_WIDTH = 300;
+const BUS_TOP = 71;
+
+const TRAIL = Array.from({ length: Math.round(LOOP_S / PUFF_EVERY_S) }, (_, i) => {
+  const base = PUFFS[i % PUFFS.length];
+  const progress = (i * PUFF_EVERY_S) / LOOP_S;
+  return {
+    ...base,
+    key: i,
+    left: `calc(${(1 - progress) * 100}% + ${base.left - BUS_WIDTH * progress}px)`,
+    top: BUS_TOP + base.top,
+    delay: `${i * PUFF_EVERY_S}s`,
+  };
+});
+
 export function BusAnimation({ className }: { className?: string }) {
   return (
     <div
@@ -93,31 +110,32 @@ export function BusAnimation({ className }: { className?: string }) {
       className={cx("relative h-[230px] overflow-hidden", className)}
     >
       <div className="absolute inset-x-0 bottom-10 h-[3px] bg-ink" />
-      <div className="absolute inset-x-0 bottom-[22px] h-1 overflow-hidden">
+      <div className="absolute inset-x-0 bottom-[8px] h-1 overflow-hidden">
         <div className="-ml-12 h-1 w-[calc(100%+48px)] animate-road bg-[repeating-linear-gradient(90deg,var(--color-road)_0_24px,transparent_24px_48px)] motion-reduce:animate-none" />
       </div>
-      <div className="absolute inset-x-0 bottom-7 h-[134px] animate-drive motion-reduce:translate-x-[calc(50%-150px)] motion-reduce:animate-none">
+      {TRAIL.map((p) => (
+        <div
+          key={p.key}
+          aria-hidden="true"
+          className="absolute animate-puff opacity-0 motion-reduce:hidden"
+          style={
+            {
+              left: p.left,
+              top: p.top,
+              width: p.size,
+              height: p.size,
+              borderRadius: p.radius,
+              animationDelay: p.delay,
+              "--dx": `${p.dx}px`,
+              "--dy": `${p.dy}px`,
+              "--grow": p.grow,
+            } as CSSProperties
+          }
+        />
+      ))}
+      <div className="absolute inset-x-0 bottom-[20px] h-[134px] animate-drive motion-reduce:translate-x-[calc(50%-150px)] motion-reduce:animate-none">
         <div className="absolute bottom-0 left-0 h-[134px] w-[300px]">
           <div className="absolute inset-x-5 -bottom-px z-0 h-2.5 rounded-[50%] bg-ink/15" />
-          {PUFFS.map((p) => (
-            <div
-              key={p.delay}
-              className="absolute animate-puff opacity-0 motion-reduce:hidden"
-              style={
-                {
-                  left: p.left,
-                  top: p.top,
-                  width: p.size,
-                  height: p.size,
-                  borderRadius: p.radius,
-                  animationDelay: p.delay,
-                  "--dx": `${p.dx}px`,
-                  "--dy": `${p.dy}px`,
-                  "--grow": p.grow,
-                } as CSSProperties
-              }
-            />
-          ))}
           <div className="absolute inset-0 z-10 origin-bottom rotate-2">
             <div className="absolute inset-0 origin-bottom animate-rattle motion-reduce:animate-none">
               <img src={ogorek} alt="" className="absolute inset-0 h-[134px] w-[300px]" />
