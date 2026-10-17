@@ -40,7 +40,8 @@ line and direction do not matter for the story.
 
 Steps 5 and 6 depend on the route table (#32), which is route data, not facts. Until it exists, `routes` is an empty
 list and `target_duration_s` is `null`; the collector still writes the file. When the route table is ready, the
-collector fills both from it without changing anything else in the file.
+collector fills both from it without changing anything else in the file. While `target_duration_s` is `null`, the
+agent uses its own default length.
 
 ## 3. Step 2: the area
 
@@ -53,6 +54,10 @@ For each group:
   added as sources and fragments (step 4). `area.fragment_ids` lists those fragments.
 - `street_names`: unique names of named streets within 400 m, with `named_after` where known. The agent uses this
   to spot clusters of street names (e.g. Siarczana, Chemiczna, Hutnicza).
+- `nearby_articles`: every Polish Wikipedia geosearch result within 400 m (up to 50), sorted by distance, as
+  `{ "title", "distance_m", "fetched" }`. Only some of them are fetched in full (step 4); the agent fetches the rest
+  through `wikipedia_article` when it decides they are worth it. Cutting the list to the nearest few would drop
+  important articles in the city centre, so the list stays complete and only the full text is limited.
 
 ## 4. Step 3: objects nearby
 
@@ -80,15 +85,15 @@ This table is only what the agent cannot work without.
 
 | Source                                      | How                                                                                                                                                                               | `type`         |
 | ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
-| Polish Wikipedia                            | plain-text extracts (see below); geosearch, 400 m, up to 50 results; plus articles linked from objects; plus an article named after the stop, if one exists; plus patron articles | `encyclopedia` |
+| Polish Wikipedia                            | plain-text extracts (see below), full text for: the ~15 nearest geosearch results, articles linked from objects, patron articles, an article named after the stop (if one exists) | `encyclopedia` |
 | Wikipedia of the district / neighbourhood   | from step 2                                                                                                                                                                       | `encyclopedia` |
 | Warszawikia (`warszawa.fandom.com/api.php`) | search by stop name and by street names within 400 m (lower priority; CC BY-SA, from the wiki's `siteinfo`)                                                                       | `varsaviana`   |
 | City data (dane.um, old API)                | see "City data as fragments" below                                                                                                                                                | `city_data`    |
 | NID heritage register                       | objects with `ref:nid` / P1435 nearby                                                                                                                                             | `official`     |
 
 Suggested to leave out of the automatic run: warszawa1939.pl, blogs, press, local portals (no API, NC licences, or
-they need judgement). The agent can fetch them through tools when it decides they are worth it (section 8). Your
-call in #9.
+they need judgement). The agent can fetch them through tools when it decides they are worth it (section 8), within
+the limits set there. Your call in #9.
 
 ### Fragment rules
 
@@ -98,10 +103,12 @@ fragment. So fragments must be the source text itself:
 - Plain text exactly as in the source. **No summarising, no rewording, no translation.**
 - Prefer text that is already plain, so the cached raw response and the fragment match. For Wikipedia use
   `action=query&prop=extracts&explaintext=1&exsectionformat=wiki`: the response is plain text with `== Section ==`
-  headings, which is also how it is split into sections.
+  headings, which is also how it is split into sections. Full extracts (without `exintro`) return one page per
+  request, so this is one request per article.
 - Warszawikia (Fandom) has no `extracts` (checked 2026-10-17), so its wikitext is converted to plain text in code. The
   converter is one deterministic function, and the quote check (section 10) runs the same function on the cached raw
-  response before searching it.
+  response before searching it. Because the check runs the same converter, it cannot catch the converter's own
+  mistakes (e.g. leftover template code), so review its output by hand for 2–3 articles.
 - Normalise to Unicode NFC and collapse runs of whitespace into one space.
 - One fragment per article section. If a section is longer than about 4000 characters, split it at paragraph
   boundaries.
@@ -118,6 +125,9 @@ These fragments are not verbatim source text, so they are marked and checked dif
 - `"derived": true`, plus `template` (the template ID) and `values` (the numbers and names inserted into it).
 - The check renders `template` with `values` and compares it with `text`, then checks that every value comes from the
   cached response or a computation over it (for example a median).
+- Each template is defined in code together with the computation behind each value (e.g. "median of `cena` over
+  transactions within 400 m"). The check reruns that computation on the cached response and compares the result; it
+  does not just look for the number somewhere in the response.
 - All other fragments have `"derived": false` and no `template` or `values`.
 
 Examples:
@@ -126,9 +136,13 @@ Examples:
   przystanku {name} wyniosła {price} zł ({n} transakcji)." RCN coordinates are in PL-2000; convert them first.
 - Participatory budget (`get_cks_budzet_obywatelski`): one fragment per project within 400 m or in the same
   neighbourhood: title, year, status, cost.
-- Streets in 1939 (`HISTORIA_ULICE_1939`, a WMS layer; attributes come from its WFS counterpart): for streets within 400 m, whether the street existed in 1939
-  and under what name: "W 1939 r. w promieniu 400 m od przystanku {name} istniała ulica {name_1939}." This is the most
-  direct city dataset for "how this place changed".
+- Streets in 1939 (`HISTORIA_ULICE_1939`, a WMS layer; attributes come from its WFS counterpart): one fragment per
+  1939 street within 400 m, with its 1939 name and distance: "W 1939 r. w promieniu 400 m od przystanku {name}
+  istniała ulica {name_1939}." This is the most direct city dataset for "how this place changed". Two limits:
+  - **Positive facts only.** No fragment says a street did not exist in 1939. A missing record in the layer is not
+    evidence that the street was not there.
+  - **No matching to today's streets.** Do not link a 1939 street to a current one by geometry; that is
+    interpretation. The agent compares the 1939 list with `street_names` itself.
 - Trees (old API): the 3 trees with the largest trunk girth within 400 m: species, girth, measurement year.
 - Road investments (old API): investments on streets within 400 m that are ongoing or planned: name, dates.
 
@@ -212,7 +226,8 @@ One file per group: `out/collected/<group_id>.json`.
     "district": "Śródmieście",
     "neighbourhood": "Powiśle",
     "fragment_ids": ["s7#1", "s7#2"],
-    "street_names": [{ "name": "Książęca", "object_id": "o1", "named_after": null, "distance_m": 0 }]
+    "street_names": [{ "name": "Książęca", "object_id": "o1", "named_after": null, "distance_m": 0 }],
+    "nearby_articles": [{ "title": "Ulica Książęca w Warszawie", "distance_m": 12, "fetched": true }]
   },
   "objects": [
     {
@@ -296,8 +311,12 @@ exposes them as plain functions. Each returns `(sources, fragments)` in the form
 | `warszawikia_article(title)`                  | one source + its section fragments                              |
 | `fetch_allowed_url(url)`                      | one source + fragments, only for domains on an allowlist        |
 
-Allowlist for `fetch_allowed_url` (to agree): `pl.wikipedia.org`, `warszawa.fandom.com`, `www.warszawa1939.pl`,
+Allowlist for `fetch_allowed_url`: `pl.wikipedia.org`, `warszawa.fandom.com`, `www.warszawa1939.pl`,
 `muzeumwarszawy.pl`, `dzieje.pl`, `zabytek.pl`, `wolnelektury.pl`. Each domain has a fixed `type` and licence.
+
+`www.warszawa1939.pl` is one of the most valuable sources for us (what stood at an address before the war), but it is
+CC BY-NC and its `robots.txt` and terms are not checked yet. Until someone checks them, `fetch_allowed_url` does not
+download from it: it returns a source with the URL only and no fragments, so the agent can link to it but not quote it.
 
 ## 9. Technical rules
 
@@ -305,6 +324,14 @@ Allowlist for `fetch_allowed_url` (to agree): `pl.wikipedia.org`, `warszawa.fand
 - Wikimedia, Wikidata, Overpass and MusicBrainz: send a `User-Agent` with a contact address, one request at a time.
 - WFS returns at most 1000 features: fetch in `bbox` tiles. `circle=` does not work.
 - Old API `datastore_search` works only **without** the API key.
+- dane.um returns `HTTP 500 {"message":"Service unavailable"}` for **every client error**: missing or wrong key,
+  missing body, missing or wrongly typed parameter. It is not an outage. Checked 2026-10-14, both endpoints work:
+  - `get_bgk_rcn`:
+    `{"dzielnica":"Bemowo","rodzajNieruchomosci":"nieruchomoscLokalowa","rodzajRynku":"rynekPierwotny","rok":2022}`.
+    `rok` must be a number (a string, as in the official example, gives 500). It filters by district, not by radius:
+    fetch the district, convert from PL-2000 and filter to 400 m. The response is GeoJSON `{type, features}`.
+  - `get_cks_budzet_obywatelski`: `{"rok":2020,"status":"zrealizowane"}`. The body is required.
+  - Both: `POST`, header `Authorization: <key>` (no "Bearer"), `Content-Type: application/json`.
 - No API keys in output files, caches committed to git, logs or fixtures.
 
 ## 10. Done when
@@ -322,8 +349,7 @@ For Książęca, Rozbrat and Pl. Trzech Krzyży (line 131):
 
 ## 11. Open questions
 
-- Endpoints `get_bgk_rcn` and `get_cks_budzet_obywatelski`: with an empty body both returned
-  `HTTP 500 {"message":"Service unavailable"}` on 2026-10-17. Check the required parameters before writing templates.
+- `www.warszawa1939.pl`: check `robots.txt` and the terms before `fetch_allowed_url` downloads from it (section 8).
 - WFS layer name for `HISTORIA_ULICE_1939` and whether it carries the 1939 street name as an attribute.
 - Does the route table (#32) give travel times per pair of stops, or do we compute them from departures?
 - Old API: download trees and road investments for the demo lines now, before the service is switched off.
