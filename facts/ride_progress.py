@@ -88,6 +88,16 @@ def _stops_with_stories(stops) -> set[int]:
     return {s.pk for s in stops if s.zespol in groups}
 
 
+def _group_runs(stops) -> list[tuple[int, int]]:
+    runs = []
+    for idx, s in enumerate(stops):
+        if runs and stops[runs[-1][0]].zespol == s.zespol:
+            runs[-1] = (runs[-1][0], idx)
+        else:
+            runs.append((idx, idx))
+    return runs
+
+
 def build_ride_info(v: Vehicle) -> dict:
     lat, lon = estimate_position(v)
     route, stops, pts, seg, t = pick_route(v, lat, lon)
@@ -103,15 +113,18 @@ def build_ride_info(v: Vehicle) -> dict:
     stories = _stops_with_stories(stops)
 
     out = []
-    for idx, s in enumerate(stops):
+    ahead = 0
+    for first, last in _group_runs(stops):
+        s = stops[first]
         item = {"name": s.name, "groupId": s.zespol}
-        if idx < current:
+        if last < current:
             item["state"] = "passed"
-        elif idx == current:
+        elif first <= current:
             item["state"] = "current"
         else:
-            item["state"] = "next" if idx <= current + NEXT_COUNT else "upcoming"
-            remaining = max(0.0, cum[idx] - here)
+            ahead += 1
+            item["state"] = "next" if ahead <= NEXT_COUNT else "upcoming"
+            remaining = max(0.0, cum[first] - here)
             item["etaMinutes"] = max(1, round(remaining / AVG_SPEED_MPS / 60))
         if s.pk in stories:
             item["hasStory"] = True

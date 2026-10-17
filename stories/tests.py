@@ -131,6 +131,17 @@ class StoryApiTest(TestCase):
         self.assertEqual([s.get("hasStory", False) for s in stops], [False, True, False])
         self.assertEqual(stops[1]["groupId"], "7002")
 
+    def test_ride_lists_each_stop_group_once(self):
+        Stop.objects.create(zespol="7002", slupek="02", name="Beta", lat=52.2105, lon=21.0)
+        line = Line.objects.create(number="99", kind="tram")
+        route = Route.objects.create(line=line, code="TP-X", last_stop_name="Gamma", stop_count=4)
+        for i, stop in enumerate(Stop.objects.order_by("lat")):
+            RouteStop.objects.create(route=route, order=i + 1, zespol=stop.zespol, slupek=stop.slupek, stop=stop)
+        Vehicle.objects.create(number="1", line="99", lat=52.2102, lon=21.0, heading=0, reported_at=timezone.now())
+        stops = self.client.get("/api/ride/1/stops/").json()["stops"]
+        self.assertEqual([s["groupId"] for s in stops], ["7001", "7002", "7003"])
+        self.assertEqual([s["state"] for s in stops], ["passed", "current", "next"])
+
     def test_export_writes_static_files(self):
         self.agent.put("/api/stories/7001/", story_payload(status="verified"), format="json")
         self.agent.put("/api/stories/7002/", story_payload("7002"), format="json")
