@@ -34,6 +34,9 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+    if not Path(args.line).exists():
+        print(f"Line config not found: {args.line}. Pass one with --line.", file=sys.stderr)
+        return 2
     try:
         line = load_line(args.line)
         if args.cmd == "route":

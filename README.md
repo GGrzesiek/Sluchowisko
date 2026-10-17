@@ -89,8 +89,7 @@ Never commit API keys. Keep them in a local `.env` file and share them outside p
 ## Data pipeline
 
 The `mwa` command (code in `pipeline/`) builds the data the app reads: the route of a line, sources for stops, verified
-stories with voice-over and subtitles, and a recorded ride for the offline demo. File formats are described in
-[`docs/data-contract.md`](docs/data-contract.md).
+stories with voice-over and subtitles, and a recorded ride for the offline demo.
 
 ```
 ZTM API ──► route.json ─────────────────────────────────────────┐
@@ -132,9 +131,8 @@ Run `make <target>`, or `.venv/bin/mwa --line config/<line>.yaml <command>` for 
 | `make simulate REC=data/raw/<line>/….jsonl` | Builds a ride from a recording, for the demo without internet | `data/processed/<line>/ride.json`            |
 | `make pipeline`                             | `route`, `context`, `verify` and `tts` in a row               |                                              |
 
-The line is configured in `config/line.yaml` (see the data contract). Manual facts go in
-`data/sources/<line>/manual/<stop>.yaml`, each with a link to its source. Stories are written by the stories agent into
-`data/processed/<line>/stories.json`; the pipeline does not call an LLM.
+Every command reads a line config, by default `config/line.yaml`. The demo line configs come with #1. Stories are
+written by the stories agent into `data/processed/<line>/stories.json`; the pipeline does not call an LLM.
 
 ## The app
 
