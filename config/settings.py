@@ -88,7 +88,6 @@ DATABASES = {
     }
 }
 
-
 # Password validation
 # https://docs.djangoproject.com/en/6.1/ref/settings/#auth-password-validators
 
@@ -137,7 +136,7 @@ MAILERS = {
 
 # --- Warsaw open data, new portal (dane.um.warszawa.pl) ---
 # POST + JSON body, token in the "Authorization" header (no prefix)
-WARSAW_API_KEY = os.getenv("WARSAW_API_KEY", "").strip()
+WARSAW_API_KEY = (os.getenv("ZTM_API_KEY") or os.getenv("WARSAW_API_KEY", "")).strip()
 WARSAW_API_BASE = os.getenv("WARSAW_API_BASE", "https://dane.um.warszawa.pl/api/action")
 # Action names = last part of the URL on dane.um.warszawa.pl
 WARSAW_POSITIONS_ACTION = os.getenv("WARSAW_POSITIONS_ACTION", "get_ztm_lokalizacja_pojazdow")
