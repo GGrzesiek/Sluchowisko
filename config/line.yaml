@@ -1,6 +1,6 @@
 defaults:
   trigger_radius_m: 60
-  speedup: 1
+  speedup: 10
   padding_s: 20
 
 lines:

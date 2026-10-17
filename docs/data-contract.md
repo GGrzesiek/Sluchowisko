@@ -115,6 +115,36 @@ No recording for that stop group (or its story is not verified yet):
 - If the file fails to load (an `error` event on the audio element), the app skips the narration for that stop and
   keeps the ride going.
 
+## Ride replay (`ride.json`)
+
+`web/public/rides/<line>.json`, one recorded ride per demo line, built from a positions recording by
+`make simulate REC=data/raw/<line>/positions-....jsonl`. The app replays it in demo mode instead of live positions.
+
+```json
+{
+  "line": "22",
+  "vehicle": "3122",
+  "brigade": "1",
+  "direction": { "from": "Powązkowska", "to": "Pl. Starynkiewicza" },
+  "recordedAt": "2026-10-17T19:31:05+02:00",
+  "durationS": 524.0,
+  "speedup": 10,
+  "triggerRadiusM": 60,
+  "points": [{ "t": 0, "lat": 52.2533, "lon": 20.9822 }],
+  "events": [{ "t": 20.0, "type": "arrive", "groupId": "5159", "pole": "04", "name": "Powązkowska", "distanceM": 8 }]
+}
+```
+
+- `t` is seconds from the start of the clip, in recorded (real) time. The clip covers the demo segment from
+  `data/demo_lines.json` plus `padding_s` (20 s) before the first stop and after the last one.
+- `points`: vehicle positions in time order. Between two points the app interpolates linearly.
+- `events`: one `arrive` event per stop group of the segment, in route order, at the moment the vehicle is closest to
+  the stop. Every stop group of the segment has a story, so `groupId` is also the story and audio id. When a stop group
+  has two poles on the route, it still gets one event; `pole` is the pole the vehicle passed.
+- `speedup`: how many times faster than real time the app plays the clip (`t / speedup` seconds of wall-clock time).
+- `recordedAt`: when the clip starts, Warsaw time.
+- `triggerRadiusM` and `distanceM`: how close the vehicle had to come to count as arriving, and how close it came.
+
 ## Audio files
 
 Public bucket `muzeum-w-autobusie-2026-media`, object `audio/<groupId>.<ext>`, one per stop group with a verified story.
