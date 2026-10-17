@@ -1,0 +1,11 @@
+defaults:
+  trigger_radius_m: 60
+  speedup: 1
+  padding_s: 20
+
+lines:
+  "22": {}
+  "18": {}
+  "179": {}
+  "169": {}
+  "117": {}
