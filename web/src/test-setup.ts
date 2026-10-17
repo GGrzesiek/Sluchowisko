@@ -34,7 +34,21 @@ export class FakeWebSocket {
   }
 }
 
+const playingMedia = new WeakSet<HTMLMediaElement>();
+
 beforeEach(() => {
+  vi.spyOn(HTMLMediaElement.prototype, "paused", "get").mockImplementation(function (this: HTMLMediaElement) {
+    return !playingMedia.has(this);
+  });
+  vi.spyOn(HTMLMediaElement.prototype, "play").mockImplementation(function (this: HTMLMediaElement) {
+    playingMedia.add(this);
+    this.dispatchEvent(new Event("play"));
+    return Promise.resolve();
+  });
+  vi.spyOn(HTMLMediaElement.prototype, "pause").mockImplementation(function (this: HTMLMediaElement) {
+    if (playingMedia.delete(this)) this.dispatchEvent(new Event("pause"));
+  });
+  vi.spyOn(HTMLMediaElement.prototype, "load").mockImplementation(() => {});
   FakeWebSocket.instances = [];
   vi.stubGlobal("WebSocket", FakeWebSocket);
   vi.stubGlobal(
@@ -45,4 +59,5 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });

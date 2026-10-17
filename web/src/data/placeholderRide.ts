@@ -1,3 +1,4 @@
+import sampleNarration from "../assets/sample-narration.m4a";
 import type { RideInfo, StoryContent } from "../types";
 
 export const PLACEHOLDER_RIDE: RideInfo = {
@@ -23,6 +24,7 @@ export const PLACEHOLDER_RIDE: RideInfo = {
 
 export const PLACEHOLDER_STORY: StoryContent = {
   title: "Hala Mirowska",
+  audio: sampleNarration,
   photos: [
     {
       alt: "Hala Mirowska od strony placu",

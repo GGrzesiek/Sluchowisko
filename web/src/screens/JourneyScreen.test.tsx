@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { JourneyScreen } from "./JourneyScreen";
+import { NarrationProvider } from "../Narration";
 import type { RideInfo, StoryContent } from "../types";
 
 const ride: RideInfo = {
@@ -24,13 +25,13 @@ const story: StoryContent = {
 
 describe("JourneyScreen", () => {
   it("shows the first photo caption and credit", () => {
-    render(<JourneyScreen ride={ride} story={story} />);
+    render(<JourneyScreen ride={ride} story={story} />, { wrapper: NarrationProvider });
     expect(screen.getByText("Pierwszy podpis", { exact: false })).toBeInTheDocument();
     expect(screen.getByText("Autor A · domena publiczna")).toBeInTheDocument();
   });
 
   it("follows the carousel scroll for the caption and dots", () => {
-    render(<JourneyScreen ride={ride} story={story} />);
+    render(<JourneyScreen ride={ride} story={story} />, { wrapper: NarrationProvider });
     expect(screen.getByRole("img", { name: "Zdjęcie 1 z 2" })).toBeInTheDocument();
     const scroller = screen.getByRole("img", { name: "Zdjęcie 1 z 2" }).previousElementSibling as HTMLElement;
     Object.defineProperty(scroller, "clientWidth", { value: 300, configurable: true });
@@ -41,20 +42,20 @@ describe("JourneyScreen", () => {
   });
 
   it("renders plain text paragraphs and clickable sources", () => {
-    render(<JourneyScreen ride={ride} story={story} />);
+    render(<JourneyScreen ride={ride} story={story} />, { wrapper: NarrationProvider });
     expect(screen.getByText("Akapit pierwszy.")).toBeInTheDocument();
     expect(screen.getByText("Akapit drugi.")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Źródło testowe/ })).toHaveAttribute("href", "https://example.org/zrodlo");
   });
 
   it("shows the vehicle and route from the ride data", () => {
-    render(<JourneyScreen ride={ride} story={story} />);
+    render(<JourneyScreen ride={ride} story={story} />, { wrapper: NarrationProvider });
     expect(screen.getByLabelText("Pojazd 4321")).toBeInTheDocument();
     expect(screen.getByRole("img", { name: /teraz Beta/ })).toBeInTheDocument();
   });
 
   it("updates the route when new stop data arrives", () => {
-    const { rerender } = render(<JourneyScreen ride={ride} story={story} />);
+    const { rerender } = render(<JourneyScreen ride={ride} story={story} />, { wrapper: NarrationProvider });
     expect(screen.getByText("5 MIN")).toBeInTheDocument();
     act(() => {
       rerender(
@@ -70,7 +71,7 @@ describe("JourneyScreen", () => {
 
   it("calls onClose from the close button", () => {
     const onClose = vi.fn();
-    render(<JourneyScreen ride={ride} story={story} onClose={onClose} />);
+    render(<JourneyScreen ride={ride} story={story} onClose={onClose} />, { wrapper: NarrationProvider });
     fireEvent.click(screen.getByRole("button", { name: "Zakończ przejazd" }));
     expect(onClose).toHaveBeenCalled();
   });
@@ -78,7 +79,7 @@ describe("JourneyScreen", () => {
 
 describe("JourneyScreen swipe hint", () => {
   it("fades the hint out as the page is scrolled", async () => {
-    render(<JourneyScreen ride={ride} story={story} />);
+    render(<JourneyScreen ride={ride} story={story} />, { wrapper: NarrationProvider });
     const hint = screen.getByText("Przesuń w górę, by dowiedzieć się więcej").parentElement as HTMLElement;
     expect(hint.style.opacity).toBe("1");
     act(() => {
@@ -87,5 +88,30 @@ describe("JourneyScreen swipe hint", () => {
     });
     await waitFor(() => expect(hint.style.opacity).toBe("0"));
     Object.defineProperty(window, "scrollY", { value: 0, configurable: true });
+  });
+});
+
+describe("JourneyScreen narration", () => {
+  const narrated: StoryContent = { ...story, audio: "/audio/beta.m4a" };
+  const player = () => document.querySelector("audio") as HTMLAudioElement;
+
+  it("plays, shows the time and pauses the story from the bar", () => {
+    render(<JourneyScreen ride={ride} story={narrated} />, { wrapper: NarrationProvider });
+    expect(screen.getByText("TERAZ · 00:00 / --:--")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Odtwórz" }));
+    Object.defineProperty(player(), "duration", { value: 20, configurable: true });
+    Object.defineProperty(player(), "currentTime", { value: 5, configurable: true });
+    fireEvent.durationChange(player());
+    fireEvent.timeUpdate(player());
+
+    expect(screen.getByText("TERAZ · 00:05 / 00:20")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Pauza" }));
+    expect(screen.getByRole("button", { name: "Odtwórz" })).toBeInTheDocument();
+  });
+
+  it("has no player bar when the story has no recording", () => {
+    render(<JourneyScreen ride={ride} story={story} />, { wrapper: NarrationProvider });
+    expect(screen.queryByRole("button", { name: "Odtwórz" })).not.toBeInTheDocument();
   });
 });

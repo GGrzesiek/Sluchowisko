@@ -44,4 +44,5 @@ export interface StoryContent {
   photos: [StoryPhoto, ...StoryPhoto[]];
   body: StoryBody;
   sources: StorySource[];
+  audio?: string;
 }
