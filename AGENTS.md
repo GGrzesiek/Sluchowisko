@@ -35,10 +35,14 @@ open sources ─▶ facts with sources ─▶ stories ─▶ verifier ─▶ voi
 - **One story per stop group** (zespół przystankowy: all poles with the same name at one junction). The same recording
   plays whatever the line or direction.
 - Each stop gets:
+  - a title: the stop group name;
   - one narrated audio clip, a popular-science hook, triggered on approach. Length comes from the travel time to the
     neighbouring stop, so the stop falls mid-story and the clip ends before the next one;
-  - a longer read-after text that goes deeper and does not repeat the narration, with Wikipedia-style source links;
-  - up to 5 images.
+  - a longer read-after text, plain text, that goes deeper and does not repeat the narration;
+  - the sources of every fact used in the narration and the text, listed at the end, Wikipedia-style;
+  - up to 5 images for a carousel, each with caption, author and licence from the source.
+- The UI gets no raw facts. A timeline, fact tiles, images inside the text and synced subtitles are optional, only if
+  time allows (#65).
 - Out of scope for now: video, AI-generated images, karaoke transcript, live LLM features.
 - File shapes for the UI: `docs/data-contract.md`. If a shape is not there yet, agree on it in the team before writing
   code that depends on it.
@@ -73,8 +77,11 @@ Full version: `README.md` (moving to `docs/workflow.md` in #39). The parts an as
 ## Hackathon rules that affect the code
 
 - All code is written during Stage II (§4.3). Notes and research from before are knowledge, not code to paste in.
-- Use of AI must be described in the documentation (§4.4). Add a line to `docs/AI_USAGE.md` when AI produced
-  something substantial.
+- Use of AI must be described in `docs/AI_USAGE.md` (§4.4). Update it in the same PR whenever a change involves AI:
+  an agent, a prompt or skill, a model or voice, or substantial AI-written code or documentation.
+- Everything we submit (README, `docs/`, content in the app) describes the finished app only. No notes to the team, no
+  TODOs, no development history: those live in issues and PRs. Every required item is reviewed before submission
+  in #66.
 - The repo and the presentation are submitted before Stage II ends (§4.5).
 - Use of Warsaw open data is 20% of the score; fit with the challenge is 15%. Make city data visible in the product,
   not only in the pipeline.
