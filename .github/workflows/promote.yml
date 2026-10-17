@@ -1,17 +1,13 @@
 name: Promote to release
 
-# Promocja development → release przez fast-forward: release dostaje dokładnie te same
-# commity, które były na /dev/. Uruchamiane ręcznie z zakładki Actions.
 on:
   workflow_dispatch:
     inputs:
       sha:
-        description: Commit z development do promocji (puste = aktualny development)
+        description: Commit on development to promote (empty = latest development)
         required: false
         default: ""
 
-# Push idzie kluczem deploy (sekret PROMOTE_DEPLOY_KEY), bo tylko on może ominąć
-# ruleset na release. Taki push uruchamia też workflow Pages.
 permissions:
   contents: read
 
@@ -29,28 +25,25 @@ jobs:
           ssh-key: ${{ secrets.PROMOTE_DEPLOY_KEY }}
 
       - name: Fast-forward release
-        id: ff
         env:
           SHA: ${{ inputs.sha }}
         run: |
           set -euo pipefail
           target=$(git rev-parse --verify "${SHA:-origin/development}^{commit}")
           if ! git merge-base --is-ancestor "$target" origin/development; then
-            echo "::error::$target nie jest na gałęzi development"; exit 1
+            echo "::error::$target is not on development"; exit 1
           fi
           if [ "$(git rev-parse origin/release)" = "$target" ]; then
-            echo "release już wskazuje $target — nic do zrobienia" >> "$GITHUB_STEP_SUMMARY"
-            echo "promoted=false" >> "$GITHUB_OUTPUT"; exit 0
+            echo "release already points at $target, nothing to do" >> "$GITHUB_STEP_SUMMARY"; exit 0
           fi
           if ! git merge-base --is-ancestor origin/release "$target"; then
-            echo "::error::release ma commity, których nie ma w $target — fast-forward niemożliwy"; exit 1
+            echo "::error::release has commits that are not in $target, cannot fast-forward"; exit 1
           fi
 
           tag="release-$(date -u +%Y-%m-%d-%H%M%S)"
-          changes=$(git log --format='- `%h` %s — %an' "origin/release..$target")
+          changes=$(git log --format='- `%h` %s (%an)' "origin/release..$target")
           git tag "$tag" "$target"
           git push --atomic origin "$target:refs/heads/release" "refs/tags/$tag"
 
           printf '### release → `%s` (`%s`)\n\n%s\n' "${target:0:7}" "$tag" "$changes" >> "$GITHUB_STEP_SUMMARY"
-          echo "promoted=true" >> "$GITHUB_OUTPUT"
 
