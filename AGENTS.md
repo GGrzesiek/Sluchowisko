@@ -34,11 +34,13 @@ open sources ─▶ facts with sources ─▶ stories ─▶ verifier ─▶ voi
 - **The app never calls an LLM.** Stories are written during development only and stored as static files. No model API
   key in the app, no generation at runtime (#3).
 - Two modes:
-  - **Demo** (the recorded demo, the hall): the app reads only static files and must work offline (#15, #17).
+  - **Demo** (the recorded demo, the hall): the app replays a recorded ride (#17). The hall has a connection, so the
+    app does not have to work offline.
   - **Live**: the app asks our back end on Cloud Run where the vehicle is and which stops come next. The back end calls
     the city API itself, cached for 10 s. The city servers answer only Polish IP addresses, so the back end stays in
     `europe-central2` (Warsaw); no laptop is needed (#83, #84).
-  - Stories, audio and images are static files in both modes.
+  - In both modes, photos and recordings load from the public media bucket `muzeum-w-autobusie-2026-media`. Anyone
+    with a link can read a file there; only writers upload (#105).
 - **One story per stop group** (zespół przystankowy: all poles with the same name at one junction). The same recording
   plays whatever the line or direction.
 - Each stop gets:

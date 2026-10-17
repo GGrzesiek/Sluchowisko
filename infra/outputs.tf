@@ -6,6 +6,14 @@ output "data_bucket" {
   value = google_storage_bucket.data.name
 }
 
+output "media_bucket" {
+  value = google_storage_bucket.media.name
+}
+
+output "media_base_url" {
+  value = "https://storage.googleapis.com/${google_storage_bucket.media.name}"
+}
+
 output "cloudsql_instance" {
   value = google_sql_database_instance.main.connection_name
 }

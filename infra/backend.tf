@@ -95,6 +95,11 @@ resource "google_cloud_run_v2_service" "backend" {
       }
 
       env {
+        name  = "GCS_MEDIA_BUCKET"
+        value = google_storage_bucket.media.name
+      }
+
+      env {
         name  = "DATABASE_URL"
         value = "postgres://${urlencode(local.api_db_user)}@127.0.0.1:5432/${google_sql_database.main.name}"
       }
