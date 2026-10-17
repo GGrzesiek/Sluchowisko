@@ -20,6 +20,16 @@ resource "google_artifact_registry_repository" "backend" {
       keep_count = 10
     }
   }
+
+  cleanup_policies {
+    id     = "delete-old"
+    action = "DELETE"
+
+    condition {
+      tag_state  = "ANY"
+      older_than = "604800s"
+    }
+  }
 }
 
 resource "google_service_account" "api" {
