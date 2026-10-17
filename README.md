@@ -70,6 +70,7 @@ CI runs on every pull request and on every push to `development` and `release`.
 | Check                       | What it does                                      | Fix locally                                                           |
 | --------------------------- | ------------------------------------------------- | --------------------------------------------------------------------- |
 | Python (ruff)               | Lint and formatting of Python code                | `pipx run ruff==0.6.9 check --fix . && pipx run ruff==0.6.9 format .` |
+| Python tests (pytest)       | Runs once `pyproject.toml` exists                 | `pytest`                                                              |
 | Formatting (prettier)       | Formatting of HTML, CSS, JS, JSON, YAML, Markdown | `npx prettier@3.3.3 --write .`                                        |
 | Workflows (actionlint)      | GitHub Actions workflows, including shell scripts | Read the error in the CI log                                          |
 | Secrets (gitleaks)          | Leaked keys or tokens anywhere in git history     | Remove the secret and rotate it                                       |
@@ -83,7 +84,7 @@ Code conventions:
 - Website content is in Polish.
 - Editor settings come from `.editorconfig`: UTF-8, LF, 2-space indent (4 for Python).
 
-Never commit API keys. Keep them in a local `.env` file and share them outside public channels.
+Never commit API keys. Copy `.env.example` to `.env` and fill it in; `.env` is ignored by git. Share keys outside public channels.
 
 ## The app
 

@@ -21,6 +21,22 @@ jobs:
       - run: pipx run ruff==0.6.9 check --output-format=github .
       - run: pipx run ruff==0.6.9 format --check .
 
+  tests:
+    name: Python tests (pytest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - if: hashFiles('pyproject.toml') != ''
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - if: hashFiles('pyproject.toml') != ''
+        run: pip install pytest -e .
+      - if: hashFiles('pyproject.toml') != ''
+        run: pytest -q || [ $? -eq 5 ]
+
   format:
     name: Formatting (prettier)
     runs-on: ubuntu-latest
