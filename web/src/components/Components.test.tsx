@@ -27,6 +27,22 @@ describe("components", () => {
         ]}
       />,
     );
-    expect(screen.getByRole("img", { name: /teraz: Krucza/ })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: /teraz Krucza/ })).toBeInTheDocument();
+  });
+
+  it("shows only the last and next stops around the current one", () => {
+    const stops = Array.from({ length: 50 }, (_, i) => ({
+      name: `Stop ${i}`,
+      state: i < 20 ? ("passed" as const) : i === 20 ? ("current" as const) : ("next" as const),
+    }));
+    render(<RouteStrip stops={stops} before={3} after={2} />);
+    expect(screen.getAllByText(/^Stop \d+$/).map((e) => e.textContent)).toEqual([
+      "Stop 17",
+      "Stop 18",
+      "Stop 19",
+      "Stop 20",
+      "Stop 21",
+      "Stop 22",
+    ]);
   });
 });

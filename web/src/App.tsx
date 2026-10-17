@@ -42,7 +42,7 @@ const STOPS: RouteStop[] = [
   { name: "Krucza", state: "passed" },
   { name: "Muzeum Narodowe", state: "passed" },
   { name: "Most Poniatowskiego", state: "current", hasStory: true },
-  { name: "Rondo Waszyngtona", state: "next", etaLabel: "2 MIN" },
+  { name: "Rondo Waszyngtona", state: "next", etaMinutes: 2 },
   { name: "Berezyńska", state: "next" },
 ];
 
@@ -71,7 +71,7 @@ function ScreenIndex() {
       <ul className="m-0 grid list-none gap-3 p-0 sm:grid-cols-2 lg:grid-cols-3">
         {SCREENS.map((screen) => (
           <li key={screen.id}>
-            {screen.Component ? (
+            {screen.render ? (
               <a
                 href={screenHash(screen.id)}
                 className="flex items-center gap-3 rounded-2xl bg-cream p-3.5 text-charcoal no-underline"
@@ -137,12 +137,15 @@ function PaletteEditor() {
   );
 }
 
+function goHome() {
+  window.location.hash = "";
+}
+
 export function App() {
   const hash = useHashRoute();
   const screen = findScreen(hash);
-  if (screen?.Component) {
-    const goHome = () => (window.location.hash = "");
-    return <screen.Component onBack={goHome} onSubmit={goHome} />;
+  if (screen?.render) {
+    return screen.render({ back: goHome, next: goHome });
   }
   return <Showcase />;
 }

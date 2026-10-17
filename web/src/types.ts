@@ -13,6 +13,12 @@ export type StoryCardState = "waiting" | "playing" | "skipped";
 export interface RouteStop {
   name: string;
   state: StopState;
-  etaLabel?: string;
+  etaMinutes?: number;
   hasStory?: boolean;
+}
+
+export interface RideInfo {
+  vehicle: string;
+  destination: string;
+  stops: RouteStop[];
 }
