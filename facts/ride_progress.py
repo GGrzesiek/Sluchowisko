@@ -14,17 +14,24 @@ How:
 """
 
 import math
+from bisect import bisect_right
+
+from django.core.cache import cache
+from django.utils import timezone
 
 from stories.models import Story
 from transit.geo import angle_diff, bearing_deg, haversine_m
 from transit.models import Route, Vehicle
 
-from .services import estimate_position
-
 NEXT_COUNT = 3  # how many stops are "next" (the rest are "upcoming")
 AT_STOP_M = 100  # this close to the following stop = we are "at" it already
 AVG_SPEED_MPS = 5.0  # ~18 km/h: typical Warsaw tram/bus average including stops
 WRONG_WAY_PENALTY_M = 1000  # route pointing against the vehicle's heading
+OTHER_VARIANT_PENALTY_M = 50
+MAIN_ROUTE_MAX_DISTANCE_M = 150
+ROUTE_MEMORY_SECONDS = 600
+MAX_EXTRAPOLATE_S = 30
+MAX_SPEED_MPS = 20.0
 
 
 class NoRouteError(Exception):
@@ -57,26 +64,43 @@ def _route_points(route):
     return stops, [(s.lat, s.lon) for s in stops]
 
 
+def _fit(v: Vehicle, lat: float, lon: float, route):
+    stops, pts = _route_points(route)
+    if len(pts) < 2:
+        return None
+    dist, i, t = _project(lat, lon, pts)
+    wrong_way = v.heading is not None and angle_diff(bearing_deg(*pts[i], *pts[i + 1]), v.heading) > 90
+    return dist, wrong_way, route, stops, pts, i, t
+
+
+def _route_memory_key(v: Vehicle) -> str:
+    return f"ride:route:{v.number}"
+
+
 def pick_route(v: Vehicle, lat: float, lon: float):
-    """The route of the vehicle's line that best matches its position and heading."""
-    best = None
-    for route in Route.objects.filter(line_id=v.line):
-        stops, pts = _route_points(route)
-        if len(pts) < 2:
-            continue
-        dist, i, t = _project(lat, lon, pts)
-        score = dist
-        if v.heading is not None:
-            seg_bearing = bearing_deg(*pts[i], *pts[i + 1])
-            if angle_diff(seg_bearing, v.heading) > 90:
-                score += WRONG_WAY_PENALTY_M
-        if not route.is_main:
-            score += 50  # prefer main variants when equally good
-        if best is None or score < best[0]:
-            best = (score, route, stops, pts, i, t)
-    if best is None:
+    fits = [f for f in (_fit(v, lat, lon, r) for r in Route.objects.filter(line_id=v.line)) if f]
+    if not fits:
         raise NoRouteError(f"No route built for line {v.line}. Run: python manage.py build_routes --line {v.line}")
-    return best[1:]
+    key = _route_memory_key(v)
+    remembered = cache.get(key)
+    for dist, wrong_way, route, *rest in fits:
+        if route.pk == remembered and dist <= MAIN_ROUTE_MAX_DISTANCE_M and not wrong_way:
+            cache.set(key, route.pk, ROUTE_MEMORY_SECONDS)
+            return (route, *rest)
+    main = [f for f in fits if f[2].is_main and f[0] <= MAIN_ROUTE_MAX_DISTANCE_M]
+    best = min(
+        main or fits,
+        key=lambda f: f[0] + (WRONG_WAY_PENALTY_M if f[1] else 0) + (0 if f[2].is_main else OTHER_VARIANT_PENALTY_M),
+    )
+    cache.set(key, best[2].pk, ROUTE_MEMORY_SECONDS)
+    return best[2:]
+
+
+def _travelled_since_reading(v: Vehicle) -> float:
+    if not v.speed_mps:
+        return 0.0
+    age = min(max(0.0, (timezone.now() - v.reported_at).total_seconds()), MAX_EXTRAPOLATE_S)
+    return min(v.speed_mps, MAX_SPEED_MPS) * age
 
 
 def _stops_with_stories(stops) -> set[int]:
@@ -99,14 +123,14 @@ def _group_runs(stops) -> list[tuple[int, int]]:
 
 
 def build_ride_info(v: Vehicle) -> dict:
-    lat, lon = estimate_position(v)
-    route, stops, pts, seg, t = pick_route(v, lat, lon)
+    route, stops, pts, seg, t = pick_route(v, v.lat, v.lon)
 
     # cumulative distance of each stop along the route, and of the vehicle
     cum = [0.0]
     for a, b in zip(pts, pts[1:], strict=False):
         cum.append(cum[-1] + haversine_m(*a, *b))
-    here = cum[seg] + t * (cum[seg + 1] - cum[seg])
+    here = min(cum[-1], cum[seg] + t * (cum[seg + 1] - cum[seg]) + _travelled_since_reading(v))
+    seg = min(bisect_right(cum, here) - 1, len(cum) - 2)
 
     # current = the stop we are at; otherwise the last one we passed
     current = seg + 1 if cum[seg + 1] - here <= AT_STOP_M else seg
