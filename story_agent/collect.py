@@ -384,10 +384,14 @@ def collect_basic(group_id: str, lat: float | None = None, lon: float | None = N
 
 
 def collect(group_id: str, lat: float | None = None, lon: float | None = None) -> Path:
-    try:
-        from collector import collect as team_collect
-    except ImportError:
-        team_collect = None
-    if team_collect is not None and lat is None:
-        return team_collect(group_id)
+    if lat is None:
+        from django.db import DatabaseError
+
+        from collector.collect import collect as team_collect
+        from collector.stops import UnknownStopGroup
+
+        try:
+            return team_collect(group_id)
+        except (UnknownStopGroup, DatabaseError) as error:
+            print(f"{error}\nUsing the basic collector from story_agent instead.")
     return collect_basic(group_id, lat, lon)

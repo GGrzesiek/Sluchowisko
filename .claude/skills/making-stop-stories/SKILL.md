@@ -39,7 +39,7 @@ Pracujesz w katalogu repo. `<g>` to `group_id` z `data/demo_lines.json` (`python
 - [ ] 6. python -m story_agent record <g>
 ```
 
-- **Krok 1.** `collect` używa zbieracza zespołu (`collector.collect`), gdy jest gotowy; do tego czasu prostszego zbieracza z `story_agent/collect.py` (Wikipedia, Wikidata, OpenStreetMap, Warszawikia, Wikimedia Commons). Współrzędne bierze z backendu; jeśli backend nie odpowiada: `collect <g> --lat … --lon …`. Plików w `out/collected/` nie edytujesz ręcznie — dociągasz źródła przez `fetch` w kroku 2.
+- **Krok 1.** `collect` uruchamia zbieracz zespołu (`collector`, opis w `collector/README.md`). Zbieracz czyta przystanki z tabeli backendu; jeśli jest pusta (`python manage.py migrate` i `python manage.py import_stops` ją wypełniają), `collect` przechodzi na prostszy zbieracz z `story_agent/collect.py`, który bierze współrzędne z backendu w chmurze. Gdy i to nie działa: `collect <g> --lat … --lon …`. Plików w `out/collected/` nie edytujesz ręcznie — dociągasz źródła przez `fetch` w kroku 2.
 - **Krok 2.** Jeśli plan ma `story.status: not_enough_material`, kończysz pracę z przystankiem i zgłaszasz, czego brakuje (`gaps`).
 - **Krok 5.** „ZA DŁUGO” → skróć scenariusz (krok 3), popraw tekst dla TTS (krok 4), nagraj ponownie. Nagrania są w cache, więc niezmienione kwestie nie kosztują drugi raz.
 - **Krok 6.** Rekord `out/stories/<g>.json` ma kształt, który przyjmuje `POST /api/stories/` backendu, ze statusem `draft`. Zdjęcia i mp3 trzeba wgrać tam, skąd serwuje je aplikacja; adres podajesz przez `--media-base` (albo `MEDIA_BASE_URL`).
