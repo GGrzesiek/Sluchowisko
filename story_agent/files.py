@@ -1,10 +1,21 @@
 import json
+import os
 from pathlib import Path
 
 from pydantic import BaseModel
 
 OUT = Path("out")
 CACHE = Path("cache")
+
+
+def env(name: str) -> str:
+    value = os.getenv(name, "").strip()
+    if value or not Path(".env").exists():
+        return value
+    for line in Path(".env").read_text(encoding="utf-8").splitlines():
+        if line.startswith(f"{name}="):
+            return line.split("=", 1)[1].strip().strip('"')
+    return ""
 
 
 def collected_path(group_id: str) -> Path:
