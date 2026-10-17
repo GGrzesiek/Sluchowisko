@@ -88,7 +88,7 @@ Never commit API keys. Copy `.env.example` to `.env` and fill it in; `.env` is i
 
 ## The app
 
-The app lives in `web/`.
+The app lives in `web/`. Use Node.js 22, like CI: on Node 20 the test runner fails to start its workers.
 
 - Plain HTML, CSS and JS files in `web/` are published as they are.
 - If `web/package.json` exists, CI runs `npm ci` and `npm run build` and publishes `web/dist`.
