@@ -11,7 +11,7 @@ class Story(models.Model):
     title = models.CharField(max_length=200)
     narration = models.TextField()
     text = models.TextField()
-    audio_url = models.URLField(max_length=500, blank=True)
+    audio_url = models.CharField(max_length=500, blank=True)
     audio_seconds = models.PositiveIntegerField(null=True, blank=True)
     photos = models.JSONField(default=list)
     sources = models.JSONField(default=list)
@@ -23,6 +23,13 @@ class Story(models.Model):
     class Meta:
         verbose_name_plural = "stories"
         ordering = ["group_id"]
+
+    def save(self, *args, **kwargs):
+        if self.status != self.Status.VERIFIED:
+            self.audio_url, self.audio_seconds = "", None
+            if kwargs.get("update_fields") is not None:
+                kwargs["update_fields"] = {*kwargs["update_fields"], "audio_url", "audio_seconds"}
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.group_id} {self.title}"

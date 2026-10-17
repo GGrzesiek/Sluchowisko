@@ -45,7 +45,7 @@ class StorySerializer(serializers.ModelSerializer):
             "generated_by",
             "updated_at",
         ]
-        read_only_fields = ["updated_at"]
+        read_only_fields = ["audio_url", "audio_seconds", "updated_at"]
 
     def validate_group_id(self, value):
         if not Stop.objects.filter(zespol=value).exists():
@@ -71,10 +71,21 @@ class StorySerializer(serializers.ModelSerializer):
             )
         return attrs
 
+    def update(self, instance, validated_data):
+        if "narration" in validated_data and validated_data["narration"] != instance.narration:
+            validated_data["audio_url"], validated_data["audio_seconds"] = "", None
+        return super().update(instance, validated_data)
+
 
 def photo_credit(photo):
     author = photo.get("author") or "NN"
     return f"Fot. {author} · {photo['license']}"
+
+
+def audio_info(story):
+    if story is None or not story.audio_url:
+        return None
+    return {"src": story.audio_url, "seconds": story.audio_seconds, "aiVoice": True}
 
 
 def story_content(story):
@@ -83,7 +94,6 @@ def story_content(story):
         "title": story.title,
         "status": story.status,
         "narration": story.narration,
-        "audio": {"src": story.audio_url, "seconds": story.audio_seconds} if story.audio_url else None,
         "photos": [
             {
                 "src": p["src"],
@@ -96,4 +106,12 @@ def story_content(story):
         ],
         "body": {"format": "plain", "text": story.text},
         "sources": story.sources,
+        **_story_audio(story),
     }
+
+
+def _story_audio(story):
+    audio = audio_info(story)
+    if audio is None:
+        return {}
+    return {"audio": audio["src"], "audioSeconds": audio["seconds"], "aiVoice": True}

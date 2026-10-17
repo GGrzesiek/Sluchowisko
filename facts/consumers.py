@@ -7,6 +7,8 @@ from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
 from django.conf import settings
 
+from stories.models import Story
+from stories.serializers import audio_info
 from transit.models import Vehicle
 from transit.services import refresh_vehicle
 from transit.warsaw_api import WarsawApiError
@@ -35,6 +37,18 @@ def _location_payload(vehicle, device_id, sent_fact_ids):
     return {"estimated_position": {"lat": lat, "lon": lon}, "stale": is_stale(vehicle), "facts": facts}
 
 
+def _upcoming_group(route):
+    stop = next((s for s in route["stops"] if s["state"] == "next"), None)
+    return (stop["groupId"], stop["name"]) if stop else None
+
+
+def _audio_message(group_id, name):
+    story = Story.objects.filter(group_id=group_id, status=Story.Status.VERIFIED).first()
+    audio = audio_info(story)
+    base = {"groupId": group_id, "name": name}
+    return {**base, "available": True, **audio} if audio else {**base, "available": False}
+
+
 def _collect(vehicle_number, device_id, sent_fact_ids):
     city_api_failed = False
     if settings.CITY_API_LIVE:
@@ -50,6 +64,7 @@ def _collect(vehicle_number, device_id, sent_fact_ids):
     result = {"errors": []}
     try:
         result["route"] = build_ride_info(vehicle)
+        result["upcoming"] = _upcoming_group(result["route"])
     except NoRouteError:
         result["errors"].append("no_route")
         result["line"] = vehicle.line
@@ -71,6 +86,7 @@ class RideConsumer(AsyncWebsocketConsumer):
         query = parse_qs(self.scope.get("query_string", b"").decode(errors="replace"))
         self.device_id = (query.get("device_id") or [None])[0]
         self.sent_fact_ids = set()
+        self.sent_audio_groups = set()
         self.last_route = None
         self.last_errors = set()
         self.push_task = None
@@ -150,6 +166,10 @@ class RideConsumer(AsyncWebsocketConsumer):
         if "route" in result and result["route"] != self.last_route:
             self.last_route = result["route"]
             await self._send("route", result["route"])
+        upcoming = result.get("upcoming")
+        if upcoming and upcoming[0] not in self.sent_audio_groups:
+            self.sent_audio_groups.add(upcoming[0])
+            await self._send("audio", await database_sync_to_async(_audio_message)(*upcoming))
         location = result.get("location")
         if location and location["facts"]:
             await self._send("location", location)

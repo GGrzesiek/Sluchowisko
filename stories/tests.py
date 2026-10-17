@@ -1,17 +1,21 @@
 import io
 import json
 import tempfile
+from io import StringIO
 from pathlib import Path
+from unittest.mock import patch
 from unittest.mock import MagicMock, patch
 
-from django.core.management import call_command
+from django.core.management import CommandError, call_command
 from django.test import TestCase, override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient
 
 from transit.models import Line, Route, RouteStop, Stop, Vehicle
 
+from .audio import UploadError, upload_public
 from .models import Story
+from .serializers import story_content
 
 TOKEN = "test-token"
 MEDIA_BUCKET = "test-media"
@@ -96,7 +100,7 @@ class StoryApiTest(TestCase):
         self.assertEqual(body["title"], "Alfa")
         self.assertEqual(body["body"], {"format": "plain", "text": "Dłuższy tekst do przeczytania."})
         self.assertEqual(body["photos"][0]["credit"], "Fot. NN · domena publiczna")
-        self.assertIsNone(body["audio"])
+        self.assertNotIn("audio", body)
 
     def test_line_stories_lists_groups_in_route_order(self):
         line = Line.objects.create(number="99", kind="tram")
@@ -234,3 +238,135 @@ class PublishPhotosTest(TestCase):
         self.agent.put("/api/stories/7001/", story_payload(photos=[external_photo()]), format="json")
         r = self.agent.patch("/api/stories/7001/", {"status": "verified"}, format="json")
         self.assertEqual(r.status_code, 200, r.content)
+
+
+def write_wav(path, seconds, rate=8000):
+    import wave
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with wave.open(str(path), "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(rate)
+        w.writeframes(b"\x00\x00" * int(seconds * rate))
+
+
+URL = "https://storage.googleapis.com/muzeum-w-autobusie-2026-media/audio/"
+
+
+@patch("stories.management.commands.sync_audio.upload_public")
+class SyncAudioTest(TestCase):
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.source = Path(tmp.name) / "bucket"
+        base = {"narration": "n", "text": "t", "photos": [], "sources": []}
+        for group_id, status in (("7001", "verified"), ("7002", "verified"), ("7003", "draft"), ("7004", "verified")):
+            Story.objects.create(group_id=group_id, title=group_id, status=status, **base)
+        write_wav(self.source / "line22" / "7001.wav", 2.6)
+        write_wav(self.source / "7003.wav", 1)
+        (self.source / "7004.mp3").write_bytes(b"not audio")
+        write_wav(self.source / "notes.wav", 1)
+
+    def sync(self, *extra):
+        out = StringIO()
+        call_command("sync_audio", "--source", str(self.source), *extra, stdout=out)
+        return out.getvalue()
+
+    def test_uploads_verified_recordings_and_sets_public_url(self, upload):
+        report = self.sync()
+        upload.assert_called_once_with(self.source / "line22" / "7001.wav", "audio/7001.wav")
+        story = Story.objects.get(group_id="7001")
+        self.assertEqual((story.audio_url, story.audio_seconds), (URL + "7001.wav", 3))
+        self.assertIn("No recording: 7002", report)
+        self.assertIn("Unreadable recording: 7004", report)
+
+    def test_missing_recording_clears_old_audio(self, upload):
+        Story.objects.filter(group_id="7002").update(audio_url=URL + "7002.mp3", audio_seconds=9)
+        self.sync()
+        story = Story.objects.get(group_id="7002")
+        self.assertEqual((story.audio_url, story.audio_seconds), ("", None))
+
+    def test_drafts_are_not_uploaded(self, upload):
+        self.sync()
+        self.assertNotIn("audio/7003.wav", [c.args[1] for c in upload.call_args_list])
+        self.assertEqual(Story.objects.get(group_id="7003").audio_url, "")
+
+    def test_dry_run_changes_nothing(self, upload):
+        report = self.sync("--dry-run")
+        upload.assert_not_called()
+        self.assertEqual(Story.objects.get(group_id="7001").audio_url, "")
+        self.assertIn("Would upload 1", report)
+
+    def test_failed_upload_leaves_story_without_audio(self, upload):
+        upload.side_effect = UploadError("bucket down")
+        with self.assertRaises(CommandError):
+            self.sync()
+        self.assertEqual(Story.objects.get(group_id="7001").audio_url, "")
+
+    def test_draft_and_new_narration_clear_audio(self, upload):
+        self.sync()
+        story = Story.objects.get(group_id="7001")
+        story.status = Story.Status.DRAFT
+        story.save()
+        self.assertEqual(Story.objects.get(group_id="7001").audio_url, "")
+
+        Story.objects.filter(group_id="7001").update(status="verified")
+        self.sync()
+        Stop.objects.create(zespol="7001", slupek="01", name="Alfa", lat=52.2, lon=21.0)
+        agent = APIClient(HTTP_AUTHORIZATION=f"Bearer {TOKEN}")
+        with override_settings(STORIES_WRITE_TOKEN=TOKEN):
+            agent.patch("/api/stories/7001/", {"text": "new text"}, format="json")
+            self.assertEqual(Story.objects.get(group_id="7001").audio_url, URL + "7001.wav")
+            r = agent.patch("/api/stories/7001/", {"narration": "new"}, format="json")
+        self.assertEqual(r.status_code, 200, r.content)
+        self.assertEqual(Story.objects.get(group_id="7001").audio_url, "")
+
+    def test_agent_cannot_overwrite_audio(self, upload):
+        self.sync()
+        Stop.objects.create(zespol="7001", slupek="01", name="Alfa", lat=52.2, lon=21.0)
+        agent = APIClient(HTTP_AUTHORIZATION=f"Bearer {TOKEN}")
+        payload = story_payload("7001", narration="n", audio_url="x", audio_seconds=1, status="verified")
+        with override_settings(STORIES_WRITE_TOKEN=TOKEN):
+            r = agent.put("/api/stories/7001/", payload, format="json")
+        self.assertEqual(r.status_code, 200, r.content)
+        self.assertEqual(Story.objects.get(group_id="7001").audio_url, URL + "7001.wav")
+
+    def test_story_content_audio_matches_frontend_type(self, upload):
+        self.sync()
+        content = story_content(Story.objects.get(group_id="7001"))
+        self.assertEqual((content["audio"], content["audioSeconds"], content["aiVoice"]), (URL + "7001.wav", 3, True))
+        self.assertNotIn("audio", story_content(Story.objects.get(group_id="7002")))
+
+
+class UploadPublicTest(TestCase):
+    @patch("stories.audio.subprocess.run")
+    @patch("stories.audio.shutil.which", return_value="/usr/bin/gcloud")
+    def test_uploads_with_content_type_and_returns_public_url(self, which, run):
+        run.return_value.returncode = 0
+        url = upload_public(Path("/tmp/5087.mp3"), "audio/5087.mp3")
+        self.assertEqual(url, "https://storage.googleapis.com/muzeum-w-autobusie-2026-media/audio/5087.mp3")
+        self.assertEqual(
+            run.call_args.args[0],
+            [
+                "/usr/bin/gcloud",
+                "storage",
+                "cp",
+                "--content-type=audio/mpeg",
+                "--cache-control=no-cache",
+                "/tmp/5087.mp3",
+                "gs://muzeum-w-autobusie-2026-media/audio/5087.mp3",
+            ],
+        )
+
+    @patch("stories.audio.subprocess.run")
+    @patch("stories.audio.shutil.which", return_value="/usr/bin/gcloud")
+    def test_failed_upload_raises(self, which, run):
+        run.return_value.returncode = 1
+        with self.assertRaises(UploadError):
+            upload_public(Path("/tmp/5087.mp3"), "audio/5087.mp3")
+
+    @patch("stories.audio.shutil.which", return_value=None)
+    def test_missing_gcloud_raises(self, which):
+        with self.assertRaises(UploadError):
+            upload_public(Path("/tmp/5087.mp3"), "audio/5087.mp3")
