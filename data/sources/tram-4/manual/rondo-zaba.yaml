@@ -1,0 +1,7 @@
+stop: Rondo Żaba
+facts:
+  - id: m1
+    year: "1924"
+    text: "Pierwszy tramwaj dojeżdża na Nowe Bródno. Ludzie nazywają linię „oczko”."
+    url: null
+    status: draft

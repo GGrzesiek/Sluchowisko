@@ -65,11 +65,12 @@ Approvals are not required, but asking a teammate to look at your PR is encourag
 
 ## Checks
 
-CI runs on every pull request and on every push to `development` and `release`.
+CI runs on every pull request and on every push to `development` and `release`. After `make install`, `make lint` runs the linters and `make format` fixes formatting.
 
 | Check                       | What it does                                      | Fix locally                                                           |
 | --------------------------- | ------------------------------------------------- | --------------------------------------------------------------------- |
 | Python (ruff)               | Lint and formatting of Python code                | `pipx run ruff==0.6.9 check --fix . && pipx run ruff==0.6.9 format .` |
+| Python tests (pytest)       | Unit tests of the data pipeline                   | `make test`                                                           |
 | Formatting (prettier)       | Formatting of HTML, CSS, JS, JSON, YAML, Markdown | `npx prettier@3.3.3 --write .`                                        |
 | Workflows (actionlint)      | GitHub Actions workflows, including shell scripts | Read the error in the CI log                                          |
 | Secrets (gitleaks)          | Leaked keys or tokens anywhere in git history     | Remove the secret and rotate it                                       |
@@ -84,6 +85,56 @@ Code conventions:
 - Editor settings come from `.editorconfig`: UTF-8, LF, 2-space indent (4 for Python).
 
 Never commit API keys. Keep them in a local `.env` file and share them outside public channels.
+
+## Data pipeline
+
+The `mwa` command (code in `pipeline/`) builds the data the app reads: the route of a line, sources for stops, verified
+stories with voice-over and subtitles, and a recorded ride for the offline demo. File formats are described in
+[`docs/data-contract.md`](docs/data-contract.md).
+
+```
+ZTM API ──► route.json ─────────────────────────────────────────┐
+   │                                                             ▼
+   │   Wikipedia / OSM / Wikidata ──► sources ──► stories agent ──► verify ──► tts ──► stories.json + audio/
+   │   + manual facts with links
+   └──► record ──► recording JSONL ──► simulate ──► ride.json
+```
+
+### Setup
+
+```bash
+make install
+cp .env.example .env
+```
+
+Fill in `.env`:
+
+| Variable                                    | Where to get it                                                       |
+| ------------------------------------------- | --------------------------------------------------------------------- |
+| `ZTM_API_KEY`                               | City of Warsaw open data API (#5)                                     |
+| `ZTM_API_BASE`                              | Leave the default unless the organisers point to a new endpoint (#32) |
+| `ELEVENLABS_API_KEY`, `ELEVENLABS_VOICE_ID` | ElevenLabs account; pick a Polish voice                               |
+| `ELEVENLABS_MODEL`, `OVERPASS_URL`          | Optional; defaults are in `.env.example`                              |
+
+`.env` is ignored by git. Never commit it.
+
+### Commands
+
+Run `make <target>`, or `.venv/bin/mwa --line config/<line>.yaml <command>` for another line.
+
+| Target                                      | Does                                                          | Writes                                       |
+| ------------------------------------------- | ------------------------------------------------------------- | -------------------------------------------- |
+| `make route`                                | Stops of the line in route order from the ZTM API             | `data/processed/<line>/route.json`           |
+| `make record MINUTES=60`                    | Records live vehicle positions                                | `data/raw/<line>/positions-*.jsonl`          |
+| `make context`                              | Fetches Wikipedia, OSM and Wikidata sources for story stops   | `data/sources/<line>/auto/*.json`            |
+| `make verify`                               | Checks every story sentence cites a linked source and length  | `verification` in `stories.json`             |
+| `make tts`                                  | Voice-over and timed subtitles for verified stories           | `audio/*.mp3`, `subtitles` in `stories.json` |
+| `make simulate REC=data/raw/<line>/….jsonl` | Builds a ride from a recording, for the demo without internet | `data/processed/<line>/ride.json`            |
+| `make pipeline`                             | `route`, `context`, `verify` and `tts` in a row               |                                              |
+
+The line is configured in `config/line.yaml` (see the data contract). Manual facts go in
+`data/sources/<line>/manual/<stop>.yaml`, each with a link to its source. Stories are written by the stories agent into
+`data/processed/<line>/stories.json`; the pipeline does not call an LLM.
 
 ## The app
 

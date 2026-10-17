@@ -1,0 +1,20 @@
+slug: tram-4
+line: "4"
+vehicle_type: 2
+origin: Rondo Żaba
+destination: Żerań Wschodni
+trigger_radius_m: 150
+stops:
+  - { name: Rondo Żaba, story: true }
+  - { name: Staniewicka }
+  - { name: Pożarowa }
+  - { name: Budowlana }
+  - { name: Julianowska, story: true }
+  - { name: Rembielińska, story: true }
+  - { name: Poborzańska, story: true }
+  - { name: Metro Bródno, story: true }
+  - { name: Toruńska }
+  - { name: Inowłodzka, story: true }
+  - { name: Odlewnicza }
+  - { name: Faradaya }
+  - { name: Żerań Wschodni }
