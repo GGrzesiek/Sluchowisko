@@ -16,8 +16,10 @@ Every sentence has a source the passenger can open ("Skąd to wiemy?").
 - Core idea: how ordinary-looking places changed. What used to be here, how it looked, how it worked. Not dry dates
   and timelines.
 - War and the Uprising are one layer among many, never the axis of the app.
-- Demo: 5 lines, each in a different part of Warsaw (#1; candidates so far: bus 131, bus 156). We submit a recorded
-  demo, not a live one (#17).
+- Demo: 5 lines, each in a different part of Warsaw (#1): tram 22 (Wola), tram 18 (Mokotów, Służewiec), bus 179
+  (Ursynów), bus 169 (Praga-Północ), bus 117 (Saska Kępa, Gocław). Ten stop groups per line, 50 stories in total; the
+  segments and stop group ids are in `data/demo_lines.json`. We submit a recorded demo, not a live one (#17); each
+  recording is 2–3 minutes of a ride.
 
 ## Architecture
 
