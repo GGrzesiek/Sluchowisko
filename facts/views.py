@@ -5,6 +5,8 @@ from rest_framework.response import Response
 
 from transit.geo import bbox, haversine_m
 from transit.models import Stop, Vehicle
+from transit.services import refresh_vehicle
+from transit.warsaw_api import WarsawApiError
 
 from .models import Fact, SeenFact
 from .serializers import FactSerializer, StopSerializer, VehicleSerializer
@@ -70,11 +72,17 @@ def nearby_stops(request):
 
 @api_view(["GET"])
 def ride_stops(request, vehicle_number):
-    """RideInfo for the frontend: the vehicle's route with passed/current/next/upcoming stops."""
     from .ride_progress import NoRouteError, build_ride_info
 
-    v = get_object_or_404(Vehicle, number=vehicle_number)
     try:
-        return Response(build_ride_info(v))
-    except NoRouteError as e:
-        return Response({"detail": str(e)}, status=status.HTTP_404_NOT_FOUND)
+        found = refresh_vehicle(vehicle_number)
+    except WarsawApiError:
+        found = Vehicle.objects.filter(number=vehicle_number).exists()
+        if not found:
+            return Response({"code": "city_api"}, status=status.HTTP_502_BAD_GATEWAY)
+    if not found:
+        return Response({"code": "vehicle_not_found"}, status=status.HTTP_404_NOT_FOUND)
+    try:
+        return Response(build_ride_info(Vehicle.objects.get(number=vehicle_number)))
+    except NoRouteError:
+        return Response({"code": "no_route"}, status=status.HTTP_404_NOT_FOUND)

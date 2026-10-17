@@ -1,14 +1,15 @@
 from datetime import timedelta
 from unittest.mock import MagicMock, patch
 
+from django.core.cache import cache
 from django.core.management import call_command
 from django.test import TestCase, override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient
 
-from transit.models import Vehicle
+from transit.models import Line, Route, RouteStop, Stop, Vehicle
 from transit.services import ingest_readings
-from transit.warsaw_api import VehicleReading, fetch_vehicle_positions
+from transit.warsaw_api import VehicleReading, WarsawApiError, fetch_vehicle_positions
 
 
 def reading(lat, lon, seconds_ago):
@@ -71,3 +72,56 @@ class ApiClientTest(TestCase):
         out = fetch_vehicle_positions(line="17")
         self.assertEqual(len(out), 1)
         self.assertEqual(out[0].vehicle_number, "3201")
+
+
+def live(number, line, lat, lon, seconds_ago=5):
+    return VehicleReading(number, line, "1", lat, lon, timezone.now() - timedelta(seconds=seconds_ago))
+
+
+class LiveRideStopsTest(TestCase):
+    def setUp(self):
+        cache.clear()
+        line = Line.objects.create(number="22", kind=Line.TRAM)
+        route = Route.objects.create(line=line, code="TP-WIA", last_stop_name="Wiatraczna", stop_count=3)
+        for order, (name, lat) in enumerate([("Powązkowska", 52.2480), ("Niska", 52.2460), ("Okopowa", 52.2440)], 1):
+            stop = Stop.objects.create(zespol=str(5000 + order), slupek="01", name=name, lat=lat, lon=20.9860)
+            RouteStop.objects.create(route=route, order=order, zespol=stop.zespol, slupek="01", stop=stop)
+        Line.objects.create(number="999", kind=Line.BUS)
+        self.client = APIClient()
+
+    def feed(self, *readings):
+        return lambda vehicle_type=2, line=None: [r for r in readings if (r.line == "999") == (vehicle_type == 1)]
+
+    @patch("transit.services.fetch_vehicle_positions")
+    def test_returns_ride_info_and_caches_city_feed(self, fetch):
+        fetch.side_effect = self.feed(live("3122", "22", 52.2461, 20.9860))
+        first = self.client.get("/api/ride/3122/stops/")
+        second = self.client.get("/api/ride/3122/stops/")
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(second.status_code, 200)
+        self.assertEqual(first.json()["destination"], "Wiatraczna")
+        self.assertEqual([s["name"] for s in first.json()["stops"]], ["Powązkowska", "Niska", "Okopowa"])
+        self.assertEqual(fetch.call_count, 2)
+
+    @patch("transit.services.fetch_vehicle_positions")
+    def test_unknown_vehicle(self, fetch):
+        fetch.side_effect = self.feed()
+        r = self.client.get("/api/ride/4040/stops/")
+        self.assertEqual((r.status_code, r.json()["code"]), (404, "vehicle_not_found"))
+
+    @patch("transit.services.fetch_vehicle_positions")
+    def test_line_without_route(self, fetch):
+        fetch.side_effect = self.feed(live("1000", "999", 52.20, 21.00))
+        r = self.client.get("/api/ride/1000/stops/")
+        self.assertEqual((r.status_code, r.json()["code"]), (404, "no_route"))
+
+    @patch("transit.services.fetch_vehicle_positions", side_effect=WarsawApiError("down"))
+    def test_city_api_down(self, fetch):
+        r = self.client.get("/api/ride/3122/stops/")
+        self.assertEqual((r.status_code, r.json()["code"]), (502, "city_api"))
+
+    @patch("transit.services.fetch_vehicle_positions")
+    def test_health(self, fetch):
+        fetch.side_effect = self.feed(live("3122", "22", 52.2461, 20.9860))
+        r = self.client.get("/api/health/")
+        self.assertEqual((r.status_code, r.json()), (200, {"db": True, "city_api": True}))
