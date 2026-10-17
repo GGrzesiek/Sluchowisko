@@ -34,7 +34,7 @@ Artifact Registry `backend`; `.github/workflows/backend.yml` builds and deploys 
 touches the backend, then checks `/api/health/`. Terraform creates the service with a placeholder image and ignores
 later image changes.
 
-Each deploy starts a new revision without traffic, checks its `/api/health/` (database and city API), and only then
+Each deploy starts a new revision without traffic, checks its `/api/health/` (database), and only then
 moves traffic to it. A red deploy leaves the previous revision serving.
 
 Secrets are created by the owner, never in Terraform or in the repo. Create both **before** the first apply of
@@ -47,6 +47,17 @@ python3 -c "import secrets; print(secrets.token_urlsafe(50), end='')" | gcloud s
 ```
 
 Database migrations are run by hand from a laptop (see Connecting), not by the deploy.
+
+The city servers (`dane.um.warszawa.pl`, `api.um.warszawa.pl`, `wms.um.warszawa.pl`) time out from Google Cloud
+(checked from Cloud Shell, 2026-10-17), so the backend runs with `CITY_API_LIVE=0` and only reads positions from the
+database. A laptop feeds them while live mode is needed:
+
+```bash
+cloud-sql-proxy --auto-iam-authn muzeum-w-autobusie-2026:europe-central2:muzeum
+python manage.py poll_vehicles --demo
+```
+
+Without the feeder the API answers `503 {"code": "no_live_data"}`; demo mode in the app does not need it.
 
 ## Who can do what
 
