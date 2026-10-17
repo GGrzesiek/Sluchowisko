@@ -18,3 +18,5 @@ ALTER DEFAULT PRIVILEGES FOR ROLE team IN SCHEMA public GRANT SELECT ON TABLES T
 
 REVOKE team FROM :"team_group";
 GRANT readers TO :"team_group";
+
+GRANT team TO :"api_user";

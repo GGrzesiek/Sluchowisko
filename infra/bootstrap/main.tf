@@ -1,8 +1,11 @@
 locals {
   services = [
+    "artifactregistry.googleapis.com",
     "cloudresourcemanager.googleapis.com",
     "iam.googleapis.com",
     "iamcredentials.googleapis.com",
+    "run.googleapis.com",
+    "secretmanager.googleapis.com",
     "serviceusage.googleapis.com",
     "sqladmin.googleapis.com",
     "storage.googleapis.com",
@@ -16,10 +19,15 @@ locals {
   ]
 
   apply_roles = [
+    "roles/artifactregistry.admin",
     "roles/cloudsql.admin",
     "roles/cloudsql.client",
     "roles/cloudsql.instanceUser",
+    "roles/iam.serviceAccountAdmin",
+    "roles/iam.serviceAccountUser",
     "roles/resourcemanager.projectIamAdmin",
+    "roles/run.admin",
+    "roles/secretmanager.admin",
     "roles/storage.admin",
   ]
 }
