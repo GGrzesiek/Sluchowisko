@@ -16,21 +16,28 @@ Workload Identity Federation.
 
 ## How changes reach GCP
 
-| Directory         | Applied by                            | Contains                                                   |
-| ----------------- | ------------------------------------- | ---------------------------------------------------------- |
-| `infra/bootstrap` | the owner, locally, rarely            | APIs, GitHub identity pool, `tf-plan` and `tf-apply`       |
-| `infra`           | `.github/workflows/infra.yml` (CI/CD) | database, bucket, members' access, `team` role in Postgres |
+| Directory         | Applied by                            | Contains                                                         |
+| ----------------- | ------------------------------------- | ---------------------------------------------------------------- |
+| `infra/bootstrap` | the owner, locally, rarely            | APIs, GitHub identity pool, `tf-plan` and `tf-apply`             |
+| `infra`           | `.github/workflows/infra.yml` (CI/CD) | database, bucket, access, `team` and `readers` roles in Postgres |
 
 - Pull request touching `infra/**`: CI runs `terraform plan` as `tf-plan` (read-only) and shows it in the job summary.
-- Merge into `development`: CD runs `terraform apply` as `tf-apply`, then `database.sql` and the member grants.
+- Merge into `development`: CD runs `terraform apply` as `tf-apply`, then `database.sql` and the writer grants.
   Only pushes to `development` can act as `tf-apply`, and `development` accepts reviewed PRs only.
 
-Team emails live in the GitHub repository variable `INFRA_MEMBERS` (a JSON list), not in the repo.
+## Who can do what
 
-## Getting access (teammates)
+| Who                                                              | Database                       | Recordings bucket |
+| ---------------------------------------------------------------- | ------------------------------ | ----------------- |
+| Writers: emails in the repo variable `INFRA_MEMBERS`             | read and write, as role `team` | read and write    |
+| Team: members of the Google Group `sluchowisko@googlegroups.com` | read only, as role `readers`   | read only         |
 
-1. Send Grzesiek the Google account email you want to use.
-2. Once it is in `INFRA_MEMBERS` and CD has run, sign in:
+Data reaches GCP only through the writers. Everyone else reads the same copy.
+
+## Getting read access (teammates)
+
+1. Ask Grzesiek to add you to `sluchowisko@googlegroups.com`. Access works about 15 minutes after joining.
+2. Sign in:
    ```
    gcloud auth login
    gcloud auth application-default login
@@ -39,9 +46,6 @@ Team emails live in the GitHub repository variable `INFRA_MEMBERS` (a JSON list)
 3. Copy the GCP lines from `.env.example` to `.env` and set `DB_USER` to your email.
 
 ### Connecting
-
-Create tables as the shared role `team`, so everyone can read and change them. Add `-c role=team` to the connection
-options.
 
 Python, with the Cloud SQL Python Connector (`cloud-sql-python-connector[pg8000]`):
 
@@ -58,25 +62,29 @@ conn = connector.connect(
     db=os.environ["DB_NAME"],
     enable_iam_auth=True,
 )
-conn.cursor().execute("SET ROLE team")
 ```
 
 Terminal or Django: run `cloud-sql-proxy --auto-iam-authn muzeum-w-autobusie-2026:europe-central2:muzeum`, then connect
-to `127.0.0.1:5432`, database `muzeum`, user = your email, no password, `options=-c role=team`.
+to `127.0.0.1:5432`, database `muzeum`, user = your email, no password.
 
-### Uploading recordings
+### Downloading recordings
 
 ```
-gcloud storage cp clip.mp3 gs://muzeum-w-autobusie-2026-audio/<path>
+gcloud storage cp -r gs://muzeum-w-autobusie-2026-audio .
 ```
 
-Overwriting an object keeps the old version. `gcloud storage ls -a gs://...` lists them.
+## Writing data (writers)
 
-## Adding or removing a member (owner)
+- Create tables as the role `team`: run `SET ROLE team` right after connecting. Tables owned by `team` are readable by
+  `readers` automatically; tables created under your own name are not.
+- `gcloud storage cp clip.mp3 gs://muzeum-w-autobusie-2026-audio/<path>` uploads a recording. Overwriting an object
+  keeps the old version; `gcloud storage ls -a gs://...` lists them.
 
-Edit `INFRA_MEMBERS` (Settings → Secrets and variables → Actions → Variables), then re-run the latest Infra workflow
-on `development`, or merge any PR touching `infra/`. Removing an email removes that person's GCP access and Cloud SQL
-user.
+## Adding or removing people (owner)
+
+- Readers: add or remove them in the Google Group. Nothing to run.
+- Writers: edit `INFRA_MEMBERS` (Settings → Secrets and variables → Actions → Variables), then re-run the latest Infra
+  workflow on `development`.
 
 ## One-time setup (already done)
 
