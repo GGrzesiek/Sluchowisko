@@ -35,9 +35,9 @@ open sources ─▶ facts with sources ─▶ stories ─▶ verifier ─▶ voi
   key in the app, no generation at runtime (#3).
 - Two modes:
   - **Demo** (the recorded demo, the hall): the app reads only static files and must work offline (#15, #17).
-  - **Live**: the app asks our back end on Cloud Run where the vehicle is and which stops come next. The back end only
-    reads positions from the database: the city API times out from Google Cloud, so a laptop runs `poll_vehicles` and
-    writes them in while live mode is needed (#83, #84).
+  - **Live**: the app asks our back end on Cloud Run where the vehicle is and which stops come next. The back end calls
+    the city API itself, cached for 10 s. The city servers answer only Polish IP addresses, so the back end stays in
+    `europe-central2` (Warsaw); no laptop is needed (#83, #84).
   - Stories, audio and images are static files in both modes.
 - **One story per stop group** (zespół przystankowy: all poles with the same name at one junction). The same recording
   plays whatever the line or direction.
