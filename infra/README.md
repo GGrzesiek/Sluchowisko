@@ -91,7 +91,7 @@ gcloud storage cp -r gs://muzeum-w-autobusie-2026-audio .
 ## One-time setup (already done)
 
 ```
-gcloud projects create muzeum-w-autobusie-2026 --name="Muzeum w autobusie"
+gcloud projects create muzeum-w-autobusie-2026 --name="Słuchowisko"
 gcloud billing projects link muzeum-w-autobusie-2026 --billing-account=<billing account>
 gcloud services enable serviceusage.googleapis.com cloudresourcemanager.googleapis.com --project=muzeum-w-autobusie-2026
 gcloud storage buckets create gs://muzeum-w-autobusie-2026-tfstate --project=muzeum-w-autobusie-2026 \

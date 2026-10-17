@@ -1,6 +1,6 @@
 # opendatahackathon42
 
-Team repository for the Open Data Hackathon project "Muzeum w autobusie".
+Team repository for the Open Data Hackathon project "Słuchowisko".
 
 | Environment | URL                                           | Built from    |
 | ----------- | --------------------------------------------- | ------------- |

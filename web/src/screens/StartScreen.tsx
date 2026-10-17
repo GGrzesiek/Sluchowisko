@@ -9,7 +9,7 @@ export function StartScreen({
 }) {
   return (
     <main className="mx-auto flex min-h-dvh max-w-md flex-col bg-paper px-6 pb-[calc(56px+env(safe-area-inset-bottom))] text-charcoal">
-      <h1 className="sr-only">Muzeum w autobusie</h1>
+      <h1 className="sr-only">Słuchowisko</h1>
       <div className="flex grow items-center">
         <BusAnimation className="-mx-6 grow" />
       </div>

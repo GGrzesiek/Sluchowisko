@@ -7,7 +7,7 @@ Keep it short and current. When a team decision changes, update this file in a P
 
 ## The project
 
-**Muzeum w autobusie**: a web app that tells short narrated stories about the places a Warsaw bus or tram passes.
+**Słuchowisko**: a web app that tells short narrated stories about the places a Warsaw bus or tram passes.
 Every sentence has a source the passenger can open ("Skąd to wiemy?").
 
 - Warsaw Open Data Hackathon 2026, challenge **„Złap oddech”**.
