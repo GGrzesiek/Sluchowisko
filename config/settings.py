@@ -153,6 +153,7 @@ POC_VEHICLE_TYPE = int(os.getenv("POC_VEHICLE_TYPE", "2"))  # 1 = bus, 2 = tram
 POLL_INTERVAL_SECONDS = int(os.getenv("POLL_INTERVAL_SECONDS", "10"))
 # Positions older than this are treated as stale (vehicle not in service / API lag)
 POSITION_MAX_AGE_SECONDS = 120
+CITY_API_LIVE = os.getenv("CITY_API_LIVE", "1") == "1"
 # How far around the vehicle we look for facts (metres)
 FACT_RADIUS_M = int(os.getenv("FACT_RADIUS_M", "400"))
 
