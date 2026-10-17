@@ -16,11 +16,11 @@ export function StartScreen({
       <div className="flex gap-4">
         <Button
           variant="outline"
-          aria-label="Wpisz numer boczny pojazdu"
+          aria-label="Wpisz numer taborowy pojazdu"
           className="grow"
           onClick={onEnterVehicleNumber}
         >
-          Nr boczny
+          Nr taborowy
         </Button>
         <Button aria-label="Zeskanuj kod QR" className="w-[108px] shrink-0" onClick={onScanQr}>
           <UiIcon name="qr" size={38} strokeWidth={1.6} />

@@ -45,8 +45,8 @@ function open(url = "/") {
 }
 
 async function typeVehicle(number: string) {
-  fireEvent.click(screen.getByRole("button", { name: "Wpisz numer boczny pojazdu" }));
-  fireEvent.change(screen.getByLabelText("Numer boczny pojazdu"), { target: { value: number } });
+  fireEvent.click(screen.getByRole("button", { name: "Wpisz numer taborowy pojazdu" }));
+  fireEvent.change(screen.getByLabelText("Numer taborowy pojazdu"), { target: { value: number } });
   fireEvent.click(screen.getByRole("button", { name: "Znajdź mój pojazd" }));
   await heading(SEARCHING);
 }
@@ -66,7 +66,7 @@ describe("navigation history", () => {
     await back();
     expect(await heading(MANUAL)).toBeInTheDocument();
     await back();
-    expect(await screen.findByRole("button", { name: "Wpisz numer boczny pojazdu" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Wpisz numer taborowy pojazdu" })).toBeInTheDocument();
   });
 
   it("does not trap the user on the searching screen after the vehicle is found", async () => {
@@ -95,7 +95,7 @@ describe("navigation history", () => {
     open();
     await typeVehicle("4040");
     act(() => socket().receive("error", { code: "vehicle_not_found" }));
-    await heading("Nie widzimy pojazdu 4040");
+    await heading("Nie widzimy tego pojazdu");
     await back();
     expect(await heading(MANUAL)).toBeInTheDocument();
   });
@@ -106,19 +106,19 @@ describe("navigation history", () => {
     fireEvent.click(screen.getByRole("button", { name: "Anuluj" }));
     expect(await heading(MANUAL)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Wstecz" }));
-    expect(await screen.findByRole("button", { name: "Wpisz numer boczny pojazdu" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Wpisz numer taborowy pojazdu" })).toBeInTheDocument();
   });
 
   it("falls back to the start screen when there is nothing to go back to", async () => {
     open("/?line=22&vehicle=3122");
     fireEvent.click(screen.getByRole("button", { name: "Anuluj" }));
-    expect(await screen.findByRole("button", { name: "Wpisz numer boczny pojazdu" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Wpisz numer taborowy pojazdu" })).toBeInTheDocument();
     expect(window.location.search).toBe("");
   });
 
   it("restores the screen from history state after a reload", async () => {
     open();
-    fireEvent.click(screen.getByRole("button", { name: "Wpisz numer boczny pojazdu" }));
+    fireEvent.click(screen.getByRole("button", { name: "Wpisz numer taborowy pojazdu" }));
     await heading(MANUAL);
     document.body.innerHTML = "";
     await waitFor(() => expect(window.history.state).toMatchObject({ screen: { name: "vehicleNumber" } }));

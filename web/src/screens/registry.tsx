@@ -4,6 +4,7 @@ import { PLACEHOLDER_RIDE, PLACEHOLDER_STORY } from "../data/placeholderRide";
 import { JourneyScreen } from "./JourneyScreen";
 import { FindingVehicleScreen } from "./FindingVehicleScreen";
 import { ManualEntryScreen } from "./ManualEntryScreen";
+import { RideDeadEndScreen } from "./RideDeadEndScreen";
 import { VehicleFoundScreen } from "./VehicleFoundScreen";
 
 export interface ScreenNav {
@@ -48,7 +49,22 @@ export const SCREENS: ScreenEntry[] = [
     render: (nav) => <JourneyScreen ride={PLACEHOLDER_RIDE} story={PLACEHOLDER_STORY} onClose={nav.back} />,
   },
   { id: "end", number: "7", title: "Koniec jazdy", render: null },
-  { id: "no-stories", number: "8", title: "Linia bez historii", render: null },
+  {
+    id: "not-found",
+    number: "8",
+    title: "Nie widzimy pojazdu",
+    render: (nav) => (
+      <RideDeadEndScreen problem="vehicleNotFound" vehicle="1234" onEnterAnother={nav.back} onStart={nav.back} />
+    ),
+  },
+  {
+    id: "no-stories",
+    number: "8",
+    title: "Linia bez historii",
+    render: (nav) => (
+      <RideDeadEndScreen problem="noRoute" vehicle="1234" line="999" onEnterAnother={nav.back} onStart={nav.back} />
+    ),
+  },
   {
     id: "reconnecting",
     number: "8",

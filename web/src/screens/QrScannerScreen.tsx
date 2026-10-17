@@ -8,7 +8,7 @@ type Problem = "noCamera" | "notOurCode";
 const MESSAGES: Record<Problem | "aim", string> = {
   aim: "Nakieruj aparat na kod QR z naklejki w pojeździe.",
   notOurCode: "To nie jest kod z naszej naklejki. Spróbuj jeszcze raz.",
-  noCamera: "Nie mamy dostępu do aparatu. Zezwól na niego w ustawieniach przeglądarki albo wpisz numer boczny.",
+  noCamera: "Nie mamy dostępu do aparatu. Zezwól na niego w ustawieniach przeglądarki albo wpisz numer taborowy.",
 };
 
 export function QrScannerScreen({
@@ -57,7 +57,7 @@ export function QrScannerScreen({
       </p>
       {problem === "noCamera" && (
         <Button className="relative" onClick={onEnterVehicleNumber}>
-          Wpisz numer boczny
+          Wpisz numer taborowy
         </Button>
       )}
     </main>

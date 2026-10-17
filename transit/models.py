@@ -23,7 +23,7 @@ class Stop(models.Model):
 class Vehicle(models.Model):
     """Latest known state of a vehicle. The QR code in the vehicle encodes `number`."""
 
-    number = models.CharField(max_length=20, primary_key=True)  # side number, e.g. "3201"
+    number = models.CharField(max_length=20, primary_key=True)  # fleet number, e.g. "3201"
     line = models.CharField(max_length=10, db_index=True)
     brigade = models.CharField(max_length=10, blank=True)
     lat = models.FloatField()

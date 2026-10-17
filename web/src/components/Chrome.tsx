@@ -102,7 +102,7 @@ export function VehicleInput({
   return (
     <div className="flex flex-col gap-2">
       <label htmlFor="vehicle-number" className="text-[15px] font-bold">
-        Numer boczny pojazdu
+        Numer taborowy pojazdu
       </label>
       <input
         id="vehicle-number"
@@ -122,15 +122,12 @@ export function VehicleInput({
           height="92"
           viewBox="0 0 132 92"
           role="img"
-          aria-label="Numer boczny jest wypisany nad drzwiami, w środku pojazdu"
+          aria-label="Numer taborowy nad szybą pojazdu"
           className="shrink-0"
         >
           <rect x="1" y="1" width="130" height="90" rx="10" fill="#F9EDD1" stroke="#C8C2B4" strokeWidth="1.5" />
-          <rect x="10" y="12" width="34" height="38" rx="4" fill="#9DAFB4" stroke="#5E4F49" strokeWidth="1.5" />
-          <rect x="88" y="12" width="34" height="38" rx="4" fill="#9DAFB4" stroke="#5E4F49" strokeWidth="1.5" />
-          <rect x="52" y="30" width="28" height="60" rx="2" fill="none" stroke="#5E4F49" strokeWidth="1.5" />
-          <path d="M66 30v60" stroke="#5E4F49" strokeWidth="1.5" />
-          <rect x="50" y="10" width="32" height="14" rx="3" fill="#282B2C" />
+          <rect x="16" y="36" width="100" height="44" rx="6" fill="#9DAFB4" stroke="#5E4F49" strokeWidth="1.5" />
+          <rect x="48" y="9" width="36" height="16" rx="3" fill="#282B2C" />
           <text
             x="66"
             y="20.5"
@@ -142,11 +139,10 @@ export function VehicleInput({
           >
             1234
           </text>
-          <circle cx="66" cy="17" r="16" fill="none" stroke="#A83322" strokeWidth="2.5" />
-          <path d="M10 72h34 M88 72h34" stroke="#C8C2B4" strokeWidth="6" strokeLinecap="round" />
+          <ellipse cx="66" cy="17" rx="25" ry="13" fill="none" stroke="#A83322" strokeWidth="2.5" />
         </svg>
         <span id="vehicle-number-hint" className="text-sm leading-[1.35]">
-          Szukaj nad drzwiami albo przy kabinie kierowcy. To 4 cyfry.
+          Numer jest wypisany w środku pojazdu, nad przednią i tylną szybą.
         </span>
       </div>
     </div>
