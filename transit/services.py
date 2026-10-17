@@ -1,8 +1,12 @@
+from django.core.cache import cache
 from django.db import transaction
 
 from .geo import bearing_deg, haversine_m
 from .models import PositionLog, Vehicle
-from .warsaw_api import VehicleReading
+from .warsaw_api import VehicleReading, fetch_vehicle_positions
+
+CITY_POSITIONS_CACHE_KEY = "city:positions"
+CITY_POSITIONS_CACHE_SECONDS = 10
 
 # Below this movement we keep the old heading (GPS jitter while standing at a stop)
 MIN_MOVE_FOR_HEADING_M = 15
@@ -42,3 +46,18 @@ def ingest_readings(readings: list[VehicleReading]) -> int:
         v.line, v.brigade = r.line, r.brigade
         v.save()
     return new
+
+
+def city_positions() -> list[VehicleReading]:
+    readings = cache.get(CITY_POSITIONS_CACHE_KEY)
+    if readings is None:
+        readings = [*fetch_vehicle_positions(vehicle_type=1), *fetch_vehicle_positions(vehicle_type=2)]
+        cache.set(CITY_POSITIONS_CACHE_KEY, readings, CITY_POSITIONS_CACHE_SECONDS)
+    return readings
+
+
+def refresh_vehicle(number: str) -> bool:
+    matches = [r for r in city_positions() if r.vehicle_number == number]
+    if matches:
+        ingest_readings([max(matches, key=lambda r: r.time)])
+    return bool(matches)
