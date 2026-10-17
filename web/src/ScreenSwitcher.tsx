@@ -3,6 +3,7 @@ import { App } from "./App";
 import { BusAnimation, Button } from "./components";
 import { screenFromUrl, type Screen } from "./navigation";
 import { PlaceholderScreen } from "./screens/PlaceholderScreen";
+import { QrScannerScreen } from "./screens/QrScannerScreen";
 import { StartScreen } from "./screens/StartScreen";
 
 export function ScreenSwitcher() {
@@ -32,7 +33,13 @@ function CurrentScreen() {
     case "vehicleNumber":
       return <PlaceholderScreen title="Którym autobusem lub tramwajem jedziesz?" onBack={goToStart} />;
     case "qrScanner":
-      return <PlaceholderScreen title="Skanowanie kodu QR" onBack={goToStart} />;
+      return (
+        <QrScannerScreen
+          onBack={goToStart}
+          onRideFound={(ride) => goTo({ name: "findingVehicle", ride })}
+          onEnterVehicleNumber={() => goTo({ name: "vehicleNumber" })}
+        />
+      );
     case "findingVehicle":
       return (
         <PlaceholderScreen title="Szukamy Twojego autobusu…">
