@@ -20,6 +20,11 @@ export function readRideFromUrl(search: string): Ride | null {
   return LINE.test(line) ? { vehicle, line } : { vehicle };
 }
 
+export function readRideFromQrCode(text: string): Ride | null {
+  if (!URL.canParse(text)) return null;
+  return readRideFromUrl(new URL(text).search);
+}
+
 export function screenFromUrl(search: string): Screen {
   const ride = readRideFromUrl(search);
   return ride ? { name: "findingVehicle", ride } : { name: "start" };

@@ -1,6 +1,12 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { ScreenSwitcher } from "./ScreenSwitcher";
 
+vi.mock("qr-scanner", () => ({
+  default: vi.fn(function () {
+    return { start: () => new Promise(() => {}), stop: vi.fn(), destroy: vi.fn() };
+  }),
+}));
+
 function openAt(url: string) {
   window.history.replaceState(null, "", url);
   render(<ScreenSwitcher />);
@@ -28,6 +34,6 @@ describe("ScreenSwitcher", () => {
     expect(screen.getByRole("heading", { name: "Którym autobusem lub tramwajem jedziesz?" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Wstecz" }));
     fireEvent.click(screen.getByRole("button", { name: "Zeskanuj kod QR" }));
-    expect(screen.getByRole("heading", { name: "Skanowanie kodu QR" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Zeskanuj kod z naklejki" })).toBeInTheDocument();
   });
 });

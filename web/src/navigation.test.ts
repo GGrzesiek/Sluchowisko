@@ -1,4 +1,4 @@
-import { readRideFromUrl, screenFromUrl } from "./navigation";
+import { readRideFromQrCode, readRideFromUrl, screenFromUrl } from "./navigation";
 
 describe("readRideFromUrl", () => {
   it("reads line and vehicle from a QR sticker link", () => {
@@ -23,6 +23,20 @@ describe("readRideFromUrl", () => {
     expect(readRideFromUrl("?line=180&vehicle=abc")).toBeNull();
     expect(readRideFromUrl("?line=180&vehicle=123")).toBeNull();
     expect(readRideFromUrl("?line=180&vehicle=12345")).toBeNull();
+  });
+});
+
+describe("readRideFromQrCode", () => {
+  it("reads the ride from a sticker link", () => {
+    expect(readRideFromQrCode("https://ggrzesiek.dev/opendatahackathon42/?line=180&vehicle=1234")).toEqual({
+      line: "180",
+      vehicle: "1234",
+    });
+  });
+
+  it("ignores codes that are not our sticker links", () => {
+    expect(readRideFromQrCode("1234")).toBeNull();
+    expect(readRideFromQrCode("https://example.com/menu")).toBeNull();
   });
 });
 
