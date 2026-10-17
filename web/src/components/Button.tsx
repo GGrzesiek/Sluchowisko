@@ -21,7 +21,7 @@ export function Button({
     <button
       type={type}
       className={cx(
-        "flex items-center justify-center font-extrabold transition-transform active:scale-[0.98]",
+        "flex items-center justify-center font-extrabold transition-transform active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 disabled:active:scale-100",
         variant === "primary" &&
           (size === "lg"
             ? "h-16 gap-3 rounded-[20px] bg-bus text-xl text-cream"

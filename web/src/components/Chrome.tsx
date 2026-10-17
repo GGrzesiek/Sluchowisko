@@ -99,6 +99,9 @@ export function VehicleInput({ value, onChange }: { value: string; onChange?: (v
       <input
         id="vehicle-number"
         inputMode="numeric"
+        autoComplete="off"
+        maxLength={4}
+        aria-describedby="vehicle-number-hint"
         placeholder="np. 1234"
         value={value}
         onChange={(e) => onChange?.(e.target.value)}
@@ -133,7 +136,9 @@ export function VehicleInput({ value, onChange }: { value: string; onChange?: (v
           <circle cx="66" cy="17" r="16" fill="none" stroke="#A83322" strokeWidth="2.5" />
           <path d="M10 72h34 M88 72h34" stroke="#C8C2B4" strokeWidth="6" strokeLinecap="round" />
         </svg>
-        <span className="text-sm leading-[1.35]">Szukaj nad drzwiami albo przy kabinie kierowcy. To 4 cyfry.</span>
+        <span id="vehicle-number-hint" className="text-sm leading-[1.35]">
+          Szukaj nad drzwiami albo przy kabinie kierowcy. To 4 cyfry.
+        </span>
       </div>
     </div>
   );
