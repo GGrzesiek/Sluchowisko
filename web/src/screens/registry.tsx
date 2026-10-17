@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { PLACEHOLDER_RIDE } from "../data/placeholderRide";
+import { FindingVehicleScreen } from "./FindingVehicleScreen";
 import { ManualEntryScreen } from "./ManualEntryScreen";
 import { VehicleFoundScreen } from "./VehicleFoundScreen";
 
@@ -23,7 +24,14 @@ export const SCREENS: ScreenEntry[] = [
     title: "Wpisz numer pojazdu",
     render: (nav) => <ManualEntryScreen onBack={nav.back} onSubmit={nav.next} />,
   },
-  { id: "loading", number: "2", title: "Szukamy pojazdu", render: null },
+  {
+    id: "loading",
+    number: "2",
+    title: "Szukamy pojazdu",
+    render: (nav) => (
+      <FindingVehicleScreen ride={{ vehicle: PLACEHOLDER_RIDE.vehicle, line: "180" }} onCancel={nav.back} />
+    ),
+  },
   {
     id: "connected",
     number: "3",

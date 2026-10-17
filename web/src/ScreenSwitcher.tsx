@@ -1,10 +1,9 @@
 import { useState } from "react";
 import { flushSync } from "react-dom";
 import { App } from "./App";
-import { BusAnimation, Button } from "./components";
 import { screenFromUrl, type Screen } from "./navigation";
 import { ManualEntryScreen } from "./screens/ManualEntryScreen";
-import { PlaceholderScreen } from "./screens/PlaceholderScreen";
+import { FindingVehicleScreen } from "./screens/FindingVehicleScreen";
 import { QrScannerScreen } from "./screens/QrScannerScreen";
 import { StartScreen } from "./screens/StartScreen";
 
@@ -49,17 +48,6 @@ function CurrentScreen() {
         />
       );
     case "findingVehicle":
-      return (
-        <PlaceholderScreen title="Szukamy Twojego autobusu…">
-          <BusAnimation className="-mx-6" />
-          <p className="m-0 text-base text-umber">
-            Pojazd {screen.ride.vehicle}
-            {screen.ride.line && `, linia ${screen.ride.line}`}
-          </p>
-          <Button variant="outline" onClick={goToStart}>
-            Anuluj
-          </Button>
-        </PlaceholderScreen>
-      );
+      return <FindingVehicleScreen ride={screen.ride} onCancel={goToStart} />;
   }
 }
