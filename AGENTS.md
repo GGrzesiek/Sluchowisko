@@ -48,16 +48,16 @@ open sources ─▶ facts with sources ─▶ stories ─▶ verifier ─▶ voi
 - Out of scope for now: video, AI-generated images, karaoke transcript, live LLM features.
 - File shapes for the UI: `docs/data-contract.md`. If a shape is not there yet, agree on it in the team before writing
   code that depends on it.
-- What the facts collector (#9) hands to the stories agent: `docs/facts-collector.md`.
+- What the facts collector (#9) hands to the stories agent: the implementation plan in issue #9.
 
 ## Who does what
 
 | Person   | GitHub       | Area                                                                                               |
 | -------- | ------------ | -------------------------------------------------------------------------------------------------- |
-| Grzesiek | @GGrzesiek   | DevOps, CI, keys (#5); deterministic facts script (#9); recording rides (#7)                       |
+| Grzesiek | @GGrzesiek   | DevOps, CI, keys (#5); recording rides (#7)                                                        |
 | Hubert   | @hububiq     | City endpoints: stops, vehicle positions, prices (#32, #6, #10); ride simulation, serving (#14–15) |
 | Kuba     | @Jzackiewicz | Pitch; stories agent: sources, stories, verifier, voice-over (#8, #11–13)                          |
-| Masza    | @MaryTim     | UI (#16, #22)                                                                                      |
+| Masza    | @MaryTim     | UI (#16, #22); facts collector (#9)                                                                |
 | Wojtek   | @xwojtuss    | UI (#16, #20)                                                                                      |
 
 Stay inside the area of your issue. If you need to change someone else's area, mention them in the PR.
