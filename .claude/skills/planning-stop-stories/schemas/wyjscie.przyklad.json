@@ -1,0 +1,72 @@
+{
+  "przystanek": { "zespol": "7010", "nazwa": "Książęca" },
+
+  "fakty": [
+    {
+      "id": "F1",
+      "tekst": "Jedno twierdzenie, po polsku, własnymi słowami.",
+      "dowody": [{ "fragment": "s1#1", "cytat": "dosłowny wycinek fragmentu s1#1" }],
+      "rodzaj": "fakt | deklaracja | wspomnienie | literatura | legenda | domysl",
+      "pewnosc": "potwierdzony | srednia",
+      "obiekt": "o1",
+      "era": "przed1800 | 1800-1918 | 1918-1939 | 1939-1945 | 1945-1989 | po1989"
+    }
+  ],
+
+  "odrzucone": [
+    {
+      "tekst": "Co mogłoby kusić, ale nie wchodzi.",
+      "fragmenty": ["s7#2"],
+      "powod": "jedno_slabe_zrodlo | sensacja_bez_potwierdzenia | sprzecznosc | wniosek_ze_zbieznosci | deklaracja_jako_fakt | poza_miejscem | licencja | nieistotne",
+      "uwaga": "jedno zdanie"
+    }
+  ],
+
+  "sprzecznosci": [
+    {
+      "opis": "Źródła podają różne daty …",
+      "fakty": ["F3", "F8"],
+      "rozstrzygniecie": "F3 — źródło o wyższej wiarygodności | nierozstrzygniete"
+    }
+  ],
+
+  "kandydaci_osi": [{ "os": "jedno zdanie", "most_typ": "A | B | C | E | D", "uzasadnienie": "jedno zdanie" }],
+
+  "historia": {
+    "status": "ok | obszar | za_malo_materialu",
+    "os": "O czym jest historia — jedno zdanie.",
+    "pytanie_sluchacza": "Na jakie pytanie pasażera odpowiada?",
+    "most": { "typ": "A | B | C | E", "zdanie_robocze": "…", "fakty": ["F1"] },
+    "haczyk": { "fakty": ["F5"], "dlaczego_ten": "…" },
+    "sposob_zmiany": "dwa_glosy | plan | lancuch | slad | ludzie | brak",
+    "glos_epoki": {
+      "fakt": "F9",
+      "fragment": "s2#4",
+      "cytat": "dosłowny cytat z domeny publicznej",
+      "autor": "Bolesław Prus"
+    },
+    "kroki": [
+      { "rola": "kotwica", "fakty": [], "notatka": "…" },
+      { "rola": "fakt_o_miejscu", "fakty": ["F1", "F2"], "notatka": null },
+      { "rola": "wyjasnienie", "fakty": ["F4"], "notatka": null },
+      { "rola": "skok", "fakty": ["F5"], "notatka": null },
+      { "rola": "powrot", "fakty": ["F6"], "notatka": "…" }
+    ],
+    "wyjasnic": [{ "co": "kim był …", "fakt": "F4" }],
+    "ton": "lekki | neutralny | podniosly | tragiczny",
+    "era": "1800-1918"
+  },
+
+  "do_tekstu": [
+    { "naglowek_roboczy": "…", "fakty": ["F7", "F8", "F10"] },
+    { "naglowek_roboczy": "Czego nie wiemy", "fakty": ["F3"] }
+  ],
+
+  "zdjecia": ["i2", "i1"],
+
+  "braki": [
+    { "czego": "…", "po_co": "…", "gdzie_szukac": "uchwała nazewnicza | warszawa1939.pl | Wikidata | prasa | …" }
+  ],
+
+  "warstwy_zapasowe": [{ "os": "…", "most_typ": "A", "fakty": ["F11", "F12"], "ton": "tragiczny" }]
+}
