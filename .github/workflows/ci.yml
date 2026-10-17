@@ -21,6 +21,16 @@ jobs:
       - run: pipx run ruff==0.6.9 check --output-format=github .
       - run: pipx run ruff==0.6.9 format --check .
 
+  backend-image:
+    name: Backend image (docker build, manage.py check)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - if: hashFiles('Dockerfile') != ''
+        run: docker build -t backend .
+      - if: hashFiles('Dockerfile') != ''
+        run: docker run --rm -e DEBUG=0 -e SECRET_KEY=ci -e DATABASE_URL=sqlite://:memory: backend python manage.py check
+
   tests:
     name: Python tests (pytest)
     runs-on: ubuntu-latest
