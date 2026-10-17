@@ -9,6 +9,7 @@ COPY manage.py ./
 COPY config config
 COPY transit transit
 COPY facts facts
+COPY stories stories
 
 RUN useradd --create-home app
 USER app
