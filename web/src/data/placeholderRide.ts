@@ -1,4 +1,4 @@
-import type { RideInfo } from "../types";
+import type { RideInfo, StoryContent } from "../types";
 
 export const PLACEHOLDER_RIDE: RideInfo = {
   vehicle: "1234",
@@ -19,4 +19,33 @@ export const PLACEHOLDER_RIDE: RideInfo = {
     { name: "Targowa", state: "upcoming", etaMinutes: 9 },
     { name: "Dworzec Wileński", state: "upcoming", etaMinutes: 12 },
   ],
+};
+
+export const PLACEHOLDER_STORY: StoryContent = {
+  title: "Hala Mirowska",
+  photos: [
+    {
+      alt: "Hala Mirowska od strony placu",
+      year: "1936",
+      caption: "Hala Mirowska · otwarcie",
+      credit: "Fot. NN · NAC / Wikimedia Commons · domena publiczna",
+    },
+    {
+      alt: "Targ przed halą",
+      year: "1902",
+      caption: "Targ przed halą",
+      credit: "Fot. NN · Wikimedia Commons · domena publiczna",
+    },
+    {
+      alt: "Hala po odbudowie",
+      year: "1951",
+      caption: "Hala po odbudowie",
+      credit: "Fot. NN · NAC · domena publiczna",
+    },
+  ],
+  body: {
+    format: "plain",
+    text: "Hale Mirowskie zbudowano na przełomie XIX i XX wieku jako miejski targ.\n\nTo tekst zastępczy. Prawdziwa treść przyjdzie z backendu, jako zwykły tekst w akapitach.\n\nDzisiaj mijasz hale w drodze do pracy.",
+  },
+  sources: [{ label: "Hale Mirowskie · Wikipedia", href: "https://pl.wikipedia.org/wiki/Hale_Mirowskie" }],
 };

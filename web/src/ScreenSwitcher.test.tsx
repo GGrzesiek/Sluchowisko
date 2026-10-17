@@ -15,6 +15,13 @@ function openAt(url: string) {
 describe("ScreenSwitcher", () => {
   afterEach(() => window.history.replaceState(null, "", "/"));
 
+  it("shows the debug page with links to every screen at /debug", () => {
+    openAt("/debug");
+    expect(screen.getByRole("heading", { name: "Ekrany" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Wpisz numer pojazdu/ })).toHaveAttribute("href", "#/manual");
+    expect(screen.getByRole("link", { name: /Powitanie/ })).toHaveAttribute("href", "/");
+  });
+
   it("opens the loading screen straight from a QR sticker link", () => {
     openAt("/?line=180&vehicle=1234");
     expect(screen.getByRole("heading", { name: "Szukamy Twojego autobusu…" })).toBeInTheDocument();
