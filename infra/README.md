@@ -62,7 +62,9 @@ conn.cursor().execute("SET ROLE team")
 ```
 
 Terminal or Django: run `cloud-sql-proxy --auto-iam-authn muzeum-w-autobusie-2026:europe-central2:muzeum`, then connect
-to `127.0.0.1:5432`, database `muzeum`, user = your email, no password, `options=-c role=team`.
+to `127.0.0.1:5432`, database `muzeum`, user = your email, no password, `options=-c role=team`. For Django, set
+`DATABASE_URL=postgres://you%40gmail.com@127.0.0.1:5432/muzeum` in `.env` (the `@` in the email becomes `%40`). With
+`DATABASE_URL` empty, Django uses a local SQLite file.
 
 ### Uploading recordings
 
