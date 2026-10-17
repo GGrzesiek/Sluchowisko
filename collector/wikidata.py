@@ -9,7 +9,7 @@ from collector.sources import Book
 API = "https://www.wikidata.org/w/api.php"
 LICENSE = "CC0 1.0"
 LICENSE_URL = "https://creativecommons.org/publicdomain/zero/1.0/"
-LABEL_BATCH = 50
+ENTITY_PROPS = "labels|descriptions|claims|sitelinks"
 NOT_WIKIPEDIAS = {
     "commonswiki",
     "specieswiki",
@@ -34,6 +34,7 @@ class Entity:
     claims: dict[str, list[dict]]
     wikipedias: int
     retrieved_at: date
+    wikipedia_title: str | None = None
 
     def items(self, prop: str) -> list[str]:
         return [value["id"] for value in self.values(prop) if isinstance(value, dict) and "id" in value]
@@ -46,51 +47,62 @@ class Entity:
         ]
 
 
+def _params(qid: str, props: str) -> dict[str, str]:
+    return {"action": "wbgetentities", "ids": qid, "props": props, "languages": "pl", "format": "json"}
+
+
 def entity(qid: str) -> Entity | None:
-    response = cache.fetch(
-        "GET",
-        API,
-        params={
-            "action": "wbgetentities",
-            "ids": qid,
-            "props": "labels|descriptions|claims|sitelinks",
-            "languages": "pl",
-            "format": "json",
-        },
-    )
+    response = cache.fetch("GET", API, params=_params(qid, ENTITY_PROPS))
     found = next(iter(response.json().get("entities", {}).values()), None)
     if not found or "missing" in found:
         return None
+    if found["id"] != qid:
+        return entity(found["id"])
+    sitelinks = found.get("sitelinks", {})
     return Entity(
         qid=found["id"],
-        label=found.get("labels", {}).get("pl", {}).get("value"),
+        label=_label(found),
         description=found.get("descriptions", {}).get("pl", {}).get("value"),
         claims=found.get("claims", {}),
-        wikipedias=sum(key.endswith("wiki") and key not in NOT_WIKIPEDIAS for key in found.get("sitelinks", {})),
+        wikipedias=sum(key.endswith("wiki") and key not in NOT_WIKIPEDIAS for key in sitelinks),
         retrieved_at=response.retrieved_at,
+        wikipedia_title=sitelinks.get("plwiki", {}).get("title"),
     )
 
 
 def labels(qids: set[str]) -> dict[str, str]:
-    ordered = sorted(qids, key=lambda qid: int(qid[1:]))
     found: dict[str, str] = {}
-    for start in range(0, len(ordered), LABEL_BATCH):
-        batch = ordered[start : start + LABEL_BATCH]
-        response = cache.fetch(
-            "GET",
-            API,
-            params={
-                "action": "wbgetentities",
-                "ids": "|".join(batch),
-                "props": "labels",
-                "languages": "pl",
-                "format": "json",
-            },
-        )
-        for qid, item in response.json().get("entities", {}).items():
-            if label := item.get("labels", {}).get("pl", {}).get("value"):
-                found[qid] = label
+    for qid in sorted(qids, key=lambda qid: int(qid[1:])):
+        response = cache.fetch("GET", API, params=_params(qid, "labels"))
+        if label := _label(next(iter(response.json().get("entities", {}).values()), {})):
+            found[qid] = label
     return found
+
+
+def _label(item: dict) -> str | None:
+    return item.get("labels", {}).get("pl", {}).get("value")
+
+
+class CachedLabels:
+    def __contains__(self, qid: str) -> bool:
+        return self[qid] is not None
+
+    def __getitem__(self, qid: str) -> str | None:
+        for props in (ENTITY_PROPS, "labels"):
+            stored = cache.lookup("GET", API, params=_params(qid, props))
+            if stored and (label := _label(next(iter(stored.json().get("entities", {}).values()), {}))):
+                return label
+        return None
+
+
+def check_values(url: str, template: str, values: dict) -> str | None:
+    found = entity(url.rsplit("/", 1)[-1])
+    if not found or not found.label:
+        return "the cached Wikidata item has no Polish label"
+    expected = {name: {"label": found.label, **facts} for name, facts in _facts(found, CachedLabels())}
+    if expected.get(template) != values:
+        return f"values {values} do not match the cached Wikidata item ({expected.get(template)})"
+    return None
 
 
 def format_time(value: dict) -> str | None:
@@ -157,7 +169,7 @@ def wikidata_entity(qid: str) -> tuple[list[Source], list[Fragment]]:
     return book.sources, book.fragments
 
 
-def _facts(found: Entity, names: dict[str, str]) -> list[tuple[str, dict[str, str | int]]]:
+def _facts(found: Entity, names: "dict[str, str] | CachedLabels") -> list[tuple[str, dict[str, str | int]]]:
     facts: list[tuple[str, dict[str, str | int]]] = []
     if found.description:
         facts.append(("wikidata.description", {"description": found.description}))
@@ -185,7 +197,7 @@ def _with_patron(nearby: NearbyObject, found: Entity | None) -> NearbyObject:
     return nearby.model_copy(update={"named_after": patrons[0]}) if len(patrons) == 1 else nearby
 
 
-def _joined(qids: list[str], names: dict[str, str]) -> str | None:
+def _joined(qids: list[str], names: "dict[str, str] | CachedLabels") -> str | None:
     return ", ".join(names[qid] for qid in qids if qid in names) or None
 
 
