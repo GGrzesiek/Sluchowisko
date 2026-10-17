@@ -18,7 +18,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: backend
+  group: infra
   cancel-in-progress: false
 
 env:
@@ -41,13 +41,23 @@ jobs:
       - run: |
           docker build -t "${IMAGE}:${GITHUB_SHA}" .
           docker push "${IMAGE}:${GITHUB_SHA}"
-      - run: gcloud run services update backend --region "$REGION" --container app --image "${IMAGE}:${GITHUB_SHA}"
-      - name: Health check
+      - name: Deploy without traffic
         run: |
-          url=$(gcloud run services describe backend --region "$REGION" --format 'value(status.url)')
-          echo "Backend: $url" >> "$GITHUB_STEP_SUMMARY"
+          gcloud run services update backend --region "$REGION" --container app --image "${IMAGE}:${GITHUB_SHA}" \
+            --no-traffic --tag candidate
+      - name: Health check on the new revision
+        run: |
+          url=$(gcloud run services describe backend --region "$REGION" --format json \
+            | jq -r '.status.traffic[] | select(.tag == "candidate") | .url')
           for _ in $(seq 10); do
-            if curl -sSf "$url/api/health/"; then exit 0; fi
+            if curl -sS --fail-with-body "$url/api/health/"; then exit 0; fi
+            echo
             sleep 6
           done
+          echo "::error::New revision is unhealthy; traffic stays on the previous one. See the JSON above (db / city_api)."
           exit 1
+      - name: Send traffic to the new revision
+        run: |
+          gcloud run services update-traffic backend --region "$REGION" --to-latest
+          url=$(gcloud run services describe backend --region "$REGION" --format 'value(status.url)')
+          echo "Backend: $url" >> "$GITHUB_STEP_SUMMARY"
