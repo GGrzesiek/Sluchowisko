@@ -43,8 +43,8 @@ jobs:
           docker push "${IMAGE}:${GITHUB_SHA}"
       - name: Deploy without traffic
         run: |
-          gcloud run services update backend --region "$REGION" --container app --image "${IMAGE}:${GITHUB_SHA}" \
-            --no-traffic --tag candidate
+          gcloud run services update backend --region "$REGION" --no-traffic --tag candidate \
+            --container app --image "${IMAGE}:${GITHUB_SHA}"
       - name: Health check on the new revision
         run: |
           url=$(gcloud run services describe backend --region "$REGION" --format json \
