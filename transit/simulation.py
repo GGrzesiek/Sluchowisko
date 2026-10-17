@@ -8,7 +8,9 @@ from zoneinfo import ZoneInfo
 import yaml
 
 WARSAW = ZoneInfo("Europe/Warsaw")
-DEFAULTS = {"trigger_radius_m": 60, "speedup": 1, "padding_s": 20}
+DEFAULTS = {"trigger_radius_m": 60, "speedup": 10, "padding_s": 20}
+MAX_GAP_FACTOR = 3
+MAX_GAP_SLACK_S = 120
 
 
 @dataclass
@@ -111,30 +113,84 @@ def _closest_on_segment(a: Reading, b: Reading, lat: float, lon: float):
     return math.hypot(ax + u * dx, ay + u * dy), u
 
 
-def detect_passes(track: list[Reading], stops: list[dict], radius_m: float):
-    start = track[0].time
-    passes, missed = [], []
-    cursor = 0
+def merge_groups(stops: list[dict]) -> list[dict]:
+    groups: list[dict] = []
     for stop in stops:
-        best = None
-        for i in range(cursor, len(track) - 1):
-            dist, u = _closest_on_segment(track[i], track[i + 1], stop["lat"], stop["lon"])
-            if dist <= radius_m:
-                if best is None or dist < best[0]:
-                    best = (dist, i, u)
-            elif best is not None:
-                break
-        if best is None:
-            missed.append(stop)
+        poles = stop.get("poles") or [{"pole": stop.get("pole"), "lat": stop["lat"], "lon": stop["lon"]}]
+        if groups and groups[-1]["group_id"] == stop.get("group_id"):
+            groups[-1]["poles"] += poles
             continue
-        dist, i, u = best
+        groups.append(
+            {
+                "group_id": stop.get("group_id"),
+                "name": stop["name"],
+                "minutes": stop.get("minutes"),
+                "poles": list(poles),
+            }
+        )
+    return groups
+
+
+def _approaches(track: list[Reading], group: dict, radius_m: float) -> list[Pass]:
+    start = track[0].time
+    found, best = [], None
+    for i in range(len(track) - 1):
         a, b = track[i], track[i + 1]
-        t = (a.time - start).total_seconds() + u * (b.time - a.time).total_seconds()
-        if passes:
-            t = max(t, passes[-1].t)
-        passes.append(Pass(stop=stop, t=t, distance_m=dist))
-        cursor = i
-    return passes, missed
+        dist, u, pole = min((*_closest_on_segment(a, b, p["lat"], p["lon"]), p["pole"]) for p in group["poles"])
+        if dist <= radius_m:
+            if best is None or dist < best[0]:
+                t = (a.time - start).total_seconds() + u * (b.time - a.time).total_seconds()
+                best = (dist, t, pole)
+        elif best is not None:
+            found.append(best)
+            best = None
+    if best is not None:
+        found.append(best)
+    stop = {"group_id": group["group_id"], "name": group["name"]}
+    return [Pass(stop={**stop, "pole": pole}, t=t, distance_m=dist) for dist, t, pole in found]
+
+
+def _max_gap_s(earlier: dict, later: dict) -> float:
+    if earlier.get("minutes") is None or later.get("minutes") is None:
+        return math.inf
+    return MAX_GAP_FACTOR * max(0, later["minutes"] - earlier["minutes"]) * 60 + MAX_GAP_SLACK_S
+
+
+def detect_passes(track: list[Reading], stops: list[dict], radius_m: float):
+    groups = merge_groups(stops)
+    candidates = [_approaches(track, g, radius_m) for g in groups]
+    best: dict[tuple[int, int], tuple] = {}
+    for g, cands in enumerate(candidates):
+        for c, cand in enumerate(cands):
+            chain = ((1, 0.0, cand.distance_m), cand.t, None)
+            for h in range(g):
+                for d, prev in enumerate(candidates[h]):
+                    if (h, d) not in best or not 0 <= cand.t - prev.t <= _max_gap_s(groups[h], groups[g]):
+                        continue
+                    (count, _, dist_sum), first_t, _ = best[(h, d)]
+                    score = (count + 1, cand.t - first_t, dist_sum + cand.distance_m)
+                    if _better(score, chain[0]):
+                        chain = (score, first_t, (h, d))
+            best[(g, c)] = chain
+    if not best:
+        return [], groups
+    key = max(best, key=lambda k: (best[k][0][0], -best[k][0][1], -best[k][0][2]))
+    chosen = []
+    while key is not None:
+        chosen.append(key)
+        key = best[key][2]
+    chosen.reverse()
+    passes = [candidates[g][c] for g, c in chosen]
+    matched = {g for g, _ in chosen}
+    return passes, [groups[g] for g in range(len(groups)) if g not in matched]
+
+
+def _better(score, other) -> bool:
+    return (score[0], -score[1], -score[2]) > (other[0], -other[1], -other[2])
+
+
+def _duration(passes: list[Pass]) -> float:
+    return passes[-1].t - passes[0].t if passes else math.inf
 
 
 def best_match(tracks: dict[str, list[Reading]], directions: list[dict], radius_m: float) -> Match | None:
@@ -145,7 +201,7 @@ def best_match(tracks: dict[str, list[Reading]], directions: list[dict], radius_
             if not passes:
                 continue
             match = Match(vehicle, direction, track, passes, missed)
-            if best is None or len(match.passes) > len(best.passes):
+            if best is None or (len(passes), -_duration(passes)) > (len(best.passes), -_duration(best.passes)):
                 best = match
     return best
 
@@ -188,7 +244,7 @@ def build_ride(match: Match, line: str, config: dict) -> dict:
         "events": [
             {
                 "t": round(p.t - window_start, 1),
-                "type": "passStop",
+                "type": "arrive",
                 "groupId": p.stop["group_id"],
                 "pole": p.stop["pole"],
                 "name": p.stop["name"],
