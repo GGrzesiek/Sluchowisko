@@ -170,6 +170,8 @@ CITY_API_LIVE = os.getenv("CITY_API_LIVE", "1") == "1"
 # How far around the vehicle we look for facts (metres)
 FACT_RADIUS_M = int(os.getenv("FACT_RADIUS_M", "400"))
 STORIES_WRITE_TOKEN = os.getenv("STORIES_WRITE_TOKEN", "").strip()
+GCS_MEDIA_BUCKET = os.getenv("GCS_MEDIA_BUCKET", "").strip()
+GCS_DATA_BUCKET = os.getenv("GCS_DATA_BUCKET", "").strip()
 
 REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.AllowAny"],

@@ -2,6 +2,7 @@ from rest_framework import serializers
 
 from transit.models import Stop
 
+from . import media
 from .models import Story
 
 MAX_PHOTOS = 5
@@ -61,6 +62,13 @@ class StorySerializer(serializers.ModelSerializer):
         for key in ("photos", "sources"):
             if key in attrs:
                 attrs[key] = [dict(item) for item in attrs[key]]
+        status = attrs.get("status") or (self.instance and self.instance.status)
+        photos = attrs.get("photos", self.instance.photos if self.instance else [])
+        outside = [p["src"] for p in photos if not media.is_media_url(p["src"])]
+        if status == Story.Status.VERIFIED and media.base_url() and outside:
+            raise serializers.ValidationError(
+                {"photos": [f"Run publish_photos before verifying; not in the media bucket: {', '.join(outside)}"]}
+            )
         return attrs
 
 

@@ -131,6 +131,11 @@ gcloud storage rsync -r gs://muzeum-w-autobusie-2026-data/cache cache
   keeps the old version; `gcloud storage ls -a gs://...` lists them.
 - After a facts collector run, `gcloud storage rsync -r out gs://muzeum-w-autobusie-2026-data/out` and the same for
   `cache` publish the files the stories agent reads (see `collector/README.md`).
+- `python manage.py publish_photos [--download] [--group 4001] [--dry-run]` puts the photos of every draft and verified
+  story into the media bucket. For each photo it finds the collector file whose `url` equals the photo's `source_url`
+  (`out/collected/<groupId>.json`), uploads it unmodified to `photos/<groupId>/<imageId>.jpg` and sets `src` to its
+  public URL. `--download` first fetches `out/` from the data bucket. A story can be verified only after its photos
+  are in the media bucket.
 
 ## Adding or removing people (owner)
 
