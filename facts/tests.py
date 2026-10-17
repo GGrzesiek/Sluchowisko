@@ -1,14 +1,18 @@
+import asyncio
 from datetime import timedelta
 from io import StringIO
 from unittest.mock import MagicMock, patch
 
 import requests
+from channels.db import database_sync_to_async
+from channels.testing import WebsocketCommunicator
 from django.core.cache import cache
 from django.core.management import call_command
-from django.test import TestCase, override_settings
+from django.test import TestCase, TransactionTestCase, override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient
 
+from config.asgi import application
 from transit.models import Line, Route, RouteStop, Stop, Vehicle
 from transit.services import ingest_readings
 from transit.warsaw_api import VehicleReading, WarsawApiError, fetch_vehicle_positions
@@ -18,38 +22,96 @@ def reading(lat, lon, seconds_ago):
     return VehicleReading("3201", "17", "5", lat, lon, timezone.now() - timedelta(seconds=seconds_ago))
 
 
-class RideFlowTest(TestCase):
+class RideSocketTestCase(TransactionTestCase):
+    def connect(self, number, query=""):
+        communicator = WebsocketCommunicator(application, f"/ws/ride/{number}/{query}")
+        return communicator
+
+    async def receive(self, communicator):
+        return await communicator.receive_json_from(timeout=5)
+
+
+@override_settings(CITY_API_LIVE=False, WS_PUSH_INTERVAL_SECONDS=3600)
+class RideFlowTest(RideSocketTestCase):
     def setUp(self):
         call_command("load_facts", "--approve", verbosity=0)
-        # Tram on Marszałkowska heading south, ~300 m north of PKiN, 10 s between readings
         ingest_readings([reading(52.2355, 21.0080, 12)])
         ingest_readings([reading(52.2345, 21.0078, 2)])
-        self.client = APIClient()
 
     def test_heading_and_speed_computed(self):
         v = Vehicle.objects.get(number="3201")
-        self.assertTrue(150 < v.heading < 210)  # roughly south
+        self.assertTrue(150 < v.heading < 210)
         self.assertGreater(v.speed_mps, 5)
 
-    def test_ride_returns_fact_ahead_and_hides_seen(self):
-        r = self.client.get("/api/ride/3201/", HTTP_X_DEVICE_ID="dev-1")
-        self.assertEqual(r.status_code, 200)
-        titles = [f["title"] for f in r.json()["facts"]]
+    async def test_pushes_location_with_text_and_images_and_hides_seen(self):
+        c = self.connect("3201", "?device_id=dev-1")
+        await c.connect()
+        msg = await self.receive(c)
+        if msg["type"] == "error":
+            msg = await self.receive(c)
+        titles = [f["title"] for f in msg["data"]["facts"]]
         self.assertIn("Prezent, o który nikt nie prosił", titles)
+        fact = msg["data"]["facts"][0]
+        self.assertIn("text", fact)
+        self.assertIsInstance(fact["images"], list)
+        await c.send_json_to({"type": "seen", "fact_id": fact["id"]})
+        await c.disconnect()
 
-        fact_id = r.json()["facts"][0]["id"]
-        self.assertEqual(self.client.post(f"/api/facts/{fact_id}/seen/", HTTP_X_DEVICE_ID="dev-1").status_code, 204)
-        r2 = self.client.get("/api/ride/3201/", HTTP_X_DEVICE_ID="dev-1")
-        self.assertNotIn(fact_id, [f["id"] for f in r2.json()["facts"]])
+        c2 = self.connect("3201", "?device_id=dev-1")
+        await c2.connect()
+        self.assertEqual((await self.receive(c2))["data"], {"code": "no_route", "line": "17"})
+        self.assertTrue(await c2.receive_nothing(timeout=1))
+        await c2.disconnect()
 
-    def test_place_behind_is_skipped(self):
-        # Tram now heading north, away from PKiN, and far enough not to "always show"
-        Vehicle.objects.filter(number="3201").update(heading=0)
-        r = self.client.get("/api/ride/3201/")
-        self.assertEqual(r.json()["facts"], [])
+    async def test_place_behind_is_skipped(self):
+        await database_sync_to_async(Vehicle.objects.filter(number="3201").update)(heading=0)
+        c = self.connect("3201")
+        await c.connect()
+        self.assertEqual((await self.receive(c))["data"], {"code": "no_route", "line": "17"})
+        self.assertTrue(await c.receive_nothing(timeout=1))
+        await c.disconnect()
 
-    def test_unknown_vehicle_404(self):
-        self.assertEqual(self.client.get("/api/ride/nope/").status_code, 404)
+    async def test_unknown_vehicle_closes_with_error(self):
+        c = self.connect("nope")
+        await c.connect()
+        self.assertEqual((await self.receive(c))["data"], {"code": "vehicle_not_found"})
+        out = await c.receive_output(timeout=5)
+        self.assertEqual((out["type"], out["code"]), ("websocket.close", 4404))
+
+    async def test_bad_client_messages_do_not_kill_connection(self):
+        c = self.connect("3201")
+        await c.connect()
+        await c.send_to(text_data="not json")
+        await c.send_to(bytes_data=b"\x00")
+        await c.send_json_to({"type": "seen", "fact_id": 1})
+        await c.send_json_to({"type": "ping"})
+        codes = []
+        while True:
+            m = await self.receive(c)
+            if m["type"] == "pong":
+                break
+            if m["type"] == "error":
+                codes.append(m["data"]["code"])
+        self.assertEqual([c for c in codes if c != "no_route"], ["invalid_json", "device_id_required"])
+        await c.disconnect()
+
+    async def test_disconnect_stops_push_loop(self):
+        c = self.connect("3201")
+        await c.connect()
+        await self.receive(c)
+        await c.disconnect()
+        await asyncio.sleep(0.1)
+        self.assertEqual([t for t in asyncio.all_tasks() if "_push_loop" in repr(t)], [])
+
+    @patch("facts.consumers._collect", side_effect=[RuntimeError("boom"), {"errors": []}])
+    @override_settings(WS_PUSH_INTERVAL_SECONDS=0.05)
+    async def test_push_failure_is_reported_and_loop_survives(self, collect):
+        c = self.connect("3201")
+        await c.connect()
+        self.assertEqual((await self.receive(c))["data"], {"code": "internal"})
+        await asyncio.sleep(0.2)
+        self.assertGreaterEqual(collect.call_count, 2)
+        await c.disconnect()
 
 
 @override_settings(WARSAW_API_KEY="x")
@@ -80,7 +142,7 @@ def live(number, line, lat, lon, seconds_ago=5):
     return VehicleReading(number, line, "1", lat, lon, timezone.now() - timedelta(seconds=seconds_ago))
 
 
-class LiveRideStopsTest(TestCase):
+class LiveRideStopsTest(RideSocketTestCase):
     def setUp(self):
         cache.clear()
         line = Line.objects.create(number="22", kind=Line.TRAM)
@@ -89,121 +151,134 @@ class LiveRideStopsTest(TestCase):
             stop = Stop.objects.create(zespol=str(5000 + order), slupek="01", name=name, lat=lat, lon=20.9860)
             RouteStop.objects.create(route=route, order=order, zespol=stop.zespol, slupek="01", stop=stop)
         Line.objects.create(number="999", kind=Line.BUS)
-        self.client = APIClient()
 
     def feed(self, *readings):
         return lambda vehicle_type=2, line=None, **_: [r for r in readings if (r.line == "999") == (vehicle_type == 1)]
 
-    @patch("transit.services.fetch_vehicle_positions")
-    def test_returns_ride_info_and_caches_city_feed(self, fetch):
-        fetch.side_effect = self.feed(live("3122", "22", 52.2461, 20.9860))
-        first = self.client.get("/api/ride/3122/stops/")
-        second = self.client.get("/api/ride/3122/stops/")
-        self.assertEqual(first.status_code, 200)
-        self.assertEqual(second.status_code, 200)
-        self.assertEqual(first.json()["destination"], "Wiatraczna")
-        self.assertEqual(first.json()["line"], "22")
-        self.assertEqual([s["name"] for s in first.json()["stops"]], ["Powązkowska", "Niska", "Okopowa"])
-        self.assertEqual(fetch.call_count, 2)
+    async def first_message(self, number):
+        c = self.connect(number)
+        await c.connect()
+        msg = await self.receive(c)
+        await c.disconnect()
+        return msg
 
     @patch("transit.services.fetch_vehicle_positions")
-    def test_unknown_vehicle(self, fetch):
+    async def test_pushes_route_first(self, fetch):
+        fetch.side_effect = self.feed(live("3122", "22", 52.2461, 20.9860))
+        msg = await self.first_message("3122")
+        self.assertEqual(msg["type"], "route")
+        self.assertEqual(msg["data"]["line"], "22")
+        self.assertEqual(msg["data"]["destination"], "Wiatraczna")
+        self.assertEqual([s["name"] for s in msg["data"]["stops"]], ["Powązkowska", "Niska", "Okopowa"])
+
+    @patch("transit.services.fetch_vehicle_positions")
+    async def test_unknown_vehicle(self, fetch):
         fetch.side_effect = self.feed()
-        r = self.client.get("/api/ride/4040/stops/")
-        self.assertEqual((r.status_code, r.json()["code"]), (404, "vehicle_not_found"))
+        msg = await self.first_message("4040")
+        self.assertEqual((msg["type"], msg["data"]["code"]), ("error", "vehicle_not_found"))
 
     @patch("transit.services.fetch_vehicle_positions")
-    def test_line_without_route(self, fetch):
+    async def test_line_without_route(self, fetch):
         fetch.side_effect = self.feed(live("1000", "999", 52.20, 21.00))
-        r = self.client.get("/api/ride/1000/stops/")
-        self.assertEqual(r.status_code, 404)
-        self.assertEqual(r.json(), {"code": "no_route", "line": "999"})
+        msg = await self.first_message("1000")
+        self.assertEqual((msg["type"], msg["data"]), ("error", {"code": "no_route", "line": "999"}))
 
     @patch("transit.services.fetch_vehicle_positions", side_effect=WarsawApiError("down"))
-    def test_city_api_down(self, fetch):
-        r = self.client.get("/api/ride/3122/stops/")
-        self.assertEqual((r.status_code, r.json()["code"]), (502, "city_api"))
+    async def test_city_api_down_keeps_connection_open(self, fetch):
+        c = self.connect("3122")
+        await c.connect()
+        self.assertEqual((await self.receive(c))["data"], {"code": "city_api"})
+        self.assertTrue(await c.receive_nothing(timeout=0.5))
+        await c.disconnect()
 
     @patch("transit.services.fetch_vehicle_positions")
-    def test_health(self, fetch):
-        fetch.side_effect = self.feed(live("3122", "22", 52.2461, 20.9860))
-        r = self.client.get("/api/health/")
-        self.assertEqual((r.status_code, r.json()), (200, {"db": True, "city_api": True}))
-
-    @patch("transit.services.fetch_vehicle_positions")
-    def test_falls_back_to_recent_position_when_city_api_fails(self, fetch):
-        ingest_readings([live("3122", "22", 52.2461, 20.9860, seconds_ago=20)])
+    async def test_falls_back_to_recent_position_when_city_api_fails(self, fetch):
+        await database_sync_to_async(ingest_readings)([live("3122", "22", 52.2461, 20.9860, seconds_ago=20)])
         fetch.side_effect = WarsawApiError("down")
-        r = self.client.get("/api/ride/3122/stops/")
-        self.assertEqual(r.status_code, 200)
-        self.assertEqual(r.json()["vehicle"], "3122")
+        msg = await self.first_message("3122")
+        self.assertEqual((msg["type"], msg["data"]["vehicle"]), ("route", "3122"))
 
     @patch("transit.services.fetch_vehicle_positions")
-    def test_stale_position_is_not_served_when_city_api_fails(self, fetch):
-        ingest_readings([live("3122", "22", 52.2461, 20.9860, seconds_ago=3600)])
+    async def test_stale_position_is_not_served_when_city_api_fails(self, fetch):
+        await database_sync_to_async(ingest_readings)([live("3122", "22", 52.2461, 20.9860, seconds_ago=3600)])
         fetch.side_effect = WarsawApiError("down")
-        r = self.client.get("/api/ride/3122/stops/")
-        self.assertEqual((r.status_code, r.json()["code"]), (503, "no_live_data"))
+        msg = await self.first_message("3122")
+        self.assertEqual((msg["type"], msg["data"]["code"]), ("error", "no_live_data"))
 
     @patch("transit.services.fetch_vehicle_positions", side_effect=WarsawApiError("down"))
-    def test_failure_is_cached_so_city_api_is_not_hammered(self, fetch):
-        self.client.get("/api/ride/3122/stops/")
-        self.client.get("/api/ride/3122/stops/")
+    async def test_failure_is_cached_so_city_api_is_not_hammered(self, fetch):
+        await self.first_message("3122")
+        await self.first_message("3122")
         self.assertEqual(fetch.call_count, 1)
+
+
+class RideStopsRestTest(TestCase):
+    def setUp(self):
+        cache.clear()
+        line = Line.objects.create(number="22", kind=Line.TRAM)
+        route = Route.objects.create(line=line, code="TP-WIA", last_stop_name="Wiatraczna", stop_count=2)
+        for order, (name, lat) in enumerate([("Powązkowska", 52.2480), ("Niska", 52.2460)], 1):
+            stop = Stop.objects.create(zespol=str(5000 + order), slupek="01", name=name, lat=lat, lon=20.9860)
+            RouteStop.objects.create(route=route, order=order, zespol=stop.zespol, slupek="01", stop=stop)
+
+    @patch("transit.services.fetch_vehicle_positions", side_effect=lambda **_: [live("3122", "22", 52.2461, 20.9860)])
+    def test_returns_ride_info(self, fetch):
+        r = APIClient().get("/api/ride/3122/stops/")
+        self.assertEqual((r.status_code, r.json()["line"], r.json()["destination"]), (200, "22", "Wiatraczna"))
+
+
+class LiveHealthTest(TestCase):
+    def setUp(self):
+        cache.clear()
+
+    @patch("transit.services.fetch_vehicle_positions", return_value=[live("3122", "22", 52.2461, 20.9860)])
+    def test_health(self, fetch):
+        r = APIClient().get("/api/health/")
+        self.assertEqual((r.status_code, r.json()), (200, {"db": True, "city_api": True}))
 
     @patch("transit.services.fetch_vehicle_positions", side_effect=WarsawApiError("down"))
     def test_health_reports_city_api_down(self, fetch):
-        r = self.client.get("/api/health/")
+        r = APIClient().get("/api/health/")
         self.assertEqual((r.status_code, r.json()), (503, {"db": True, "city_api": False}))
 
 
 @override_settings(CITY_API_LIVE=False)
 class FedRideStopsTest(LiveRideStopsTest):
     @patch("transit.services.fetch_vehicle_positions")
-    def test_returns_ride_info_and_caches_city_feed(self, fetch):
-        ingest_readings([live("3122", "22", 52.2461, 20.9860)])
-        r = self.client.get("/api/ride/3122/stops/")
-        self.assertEqual(r.status_code, 200)
-        self.assertEqual(r.json()["destination"], "Wiatraczna")
+    async def test_pushes_route_first(self, fetch):
+        await database_sync_to_async(ingest_readings)([live("3122", "22", 52.2461, 20.9860)])
+        msg = await self.first_message("3122")
+        self.assertEqual((msg["type"], msg["data"]["destination"]), ("route", "Wiatraczna"))
         fetch.assert_not_called()
 
     @patch("transit.services.fetch_vehicle_positions")
-    def test_line_without_route(self, fetch):
-        ingest_readings([live("1000", "999", 52.20, 21.00)])
-        r = self.client.get("/api/ride/1000/stops/")
-        self.assertEqual((r.status_code, r.json()["code"]), (404, "no_route"))
+    async def test_line_without_route(self, fetch):
+        await database_sync_to_async(ingest_readings)([live("1000", "999", 52.20, 21.00)])
+        msg = await self.first_message("1000")
+        self.assertEqual((msg["type"], msg["data"]["code"]), ("error", "no_route"))
 
     @patch("transit.services.fetch_vehicle_positions")
-    def test_city_api_down(self, fetch):
-        r = self.client.get("/api/ride/3122/stops/")
-        self.assertEqual((r.status_code, r.json()["code"]), (404, "vehicle_not_found"))
+    async def test_city_api_down_keeps_connection_open(self, fetch):
+        msg = await self.first_message("3122")
+        self.assertEqual(msg["data"]["code"], "vehicle_not_found")
         fetch.assert_not_called()
 
     @patch("transit.services.fetch_vehicle_positions")
-    def test_falls_back_to_recent_position_when_city_api_fails(self, fetch):
-        ingest_readings([live("3122", "22", 52.2461, 20.9860, seconds_ago=20)])
-        self.assertEqual(self.client.get("/api/ride/3122/stops/").status_code, 200)
+    async def test_falls_back_to_recent_position_when_city_api_fails(self, fetch):
+        await database_sync_to_async(ingest_readings)([live("3122", "22", 52.2461, 20.9860, seconds_ago=20)])
+        msg = await self.first_message("3122")
+        self.assertEqual(msg["type"], "route")
 
     @patch("transit.services.fetch_vehicle_positions")
-    def test_stale_position_is_not_served_when_city_api_fails(self, fetch):
-        ingest_readings([live("3122", "22", 52.2461, 20.9860, seconds_ago=3600)])
-        r = self.client.get("/api/ride/3122/stops/")
-        self.assertEqual((r.status_code, r.json()["code"]), (503, "no_live_data"))
+    async def test_stale_position_is_not_served_when_city_api_fails(self, fetch):
+        await database_sync_to_async(ingest_readings)([live("3122", "22", 52.2461, 20.9860, seconds_ago=3600)])
+        msg = await self.first_message("3122")
+        self.assertEqual(msg["data"]["code"], "no_live_data")
 
     @patch("transit.services.fetch_vehicle_positions")
-    def test_failure_is_cached_so_city_api_is_not_hammered(self, fetch):
-        self.client.get("/api/ride/3122/stops/")
+    async def test_failure_is_cached_so_city_api_is_not_hammered(self, fetch):
+        await self.first_message("3122")
         fetch.assert_not_called()
-
-    @patch("transit.services.fetch_vehicle_positions")
-    def test_health(self, fetch):
-        r = self.client.get("/api/health/")
-        self.assertEqual((r.status_code, r.json()), (200, {"db": True}))
-        fetch.assert_not_called()
-
-    @patch("transit.services.fetch_vehicle_positions")
-    def test_health_reports_city_api_down(self, fetch):
-        self.test_health()
 
 
 class PollVehiclesTest(TestCase):
