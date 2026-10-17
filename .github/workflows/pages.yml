@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  pages: read
 
 concurrency:
   group: pages
