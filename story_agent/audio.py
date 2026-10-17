@@ -9,6 +9,7 @@ from pathlib import Path
 
 from story_agent import elevenlabs
 from story_agent.checks import strip_tags, words
+from story_agent.files import env
 from story_agent.models import Sound, StoryScript, VoicedScript
 
 RATE = 44100
@@ -34,9 +35,9 @@ class Placed:
 
 
 def ffmpeg() -> str:
-    path = shutil.which("ffmpeg")
+    path = env("FFMPEG_PATH") or shutil.which("ffmpeg")
     if not path:
-        raise RuntimeError("ffmpeg is not installed (Windows: winget install Gyan.FFmpeg)")
+        raise RuntimeError("ffmpeg not found: install it or set FFMPEG_PATH in .env")
     return path
 
 
