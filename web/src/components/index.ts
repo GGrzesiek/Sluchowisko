@@ -4,6 +4,8 @@ export * from "./Grain";
 export * from "./Icon";
 export * from "./LineBadge";
 export * from "./Picture";
+export * from "./PhotoCarousel";
+export * from "./StoryText";
 export * from "./Route";
 export * from "./Story";
 export * from "./Article";

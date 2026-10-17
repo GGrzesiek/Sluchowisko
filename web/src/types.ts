@@ -22,3 +22,25 @@ export interface RideInfo {
   destination: string;
   stops: RouteStop[];
 }
+
+export interface StoryPhoto {
+  src?: string;
+  alt: string;
+  year: string;
+  caption: string;
+  credit: string;
+}
+
+export interface StorySource {
+  label: string;
+  href: string;
+}
+
+export type StoryBody = { format: "plain"; text: string };
+
+export interface StoryContent {
+  title: string;
+  photos: [StoryPhoto, ...StoryPhoto[]];
+  body: StoryBody;
+  sources: StorySource[];
+}

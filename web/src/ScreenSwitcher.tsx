@@ -7,9 +7,13 @@ import { FindingVehicleScreen } from "./screens/FindingVehicleScreen";
 import { QrScannerScreen } from "./screens/QrScannerScreen";
 import { StartScreen } from "./screens/StartScreen";
 
+export function isDebugPath(pathname: string): boolean {
+  return pathname.replace(/\/+$/, "").endsWith("/debug");
+}
+
 export function ScreenSwitcher() {
   const hash = window.location.hash;
-  if (hash === "#components" || hash.startsWith("#/")) return <App />;
+  if (isDebugPath(window.location.pathname) || hash === "#components" || hash.startsWith("#/")) return <App />;
   return <CurrentScreen />;
 }
 
