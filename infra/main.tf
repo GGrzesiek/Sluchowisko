@@ -72,6 +72,25 @@ resource "google_sql_user" "members" {
   type     = "CLOUD_IAM_USER"
 }
 
+resource "google_sql_user" "team_group" {
+  name     = var.team_group
+  instance = google_sql_database_instance.main.name
+  type     = "CLOUD_IAM_GROUP"
+}
+
+resource "google_project_iam_member" "team_group" {
+  for_each = toset(local.member_project_roles)
+  project  = var.project_id
+  role     = each.value
+  member   = "group:${var.team_group}"
+}
+
+resource "google_storage_bucket_iam_member" "team_group" {
+  bucket = google_storage_bucket.audio.name
+  role   = "roles/storage.objectAdmin"
+  member = "group:${var.team_group}"
+}
+
 resource "google_project_iam_member" "members" {
   for_each = local.member_role_pairs
   project  = var.project_id
