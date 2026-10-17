@@ -28,6 +28,27 @@ describe("ScreenSwitcher", () => {
     expect(window.location.search).toBe("");
   });
 
+  it("focuses the number field as soon as manual entry opens", () => {
+    openAt("/");
+    fireEvent.click(screen.getByRole("button", { name: "Wpisz numer boczny pojazdu" }));
+    expect(screen.getByLabelText("Numer boczny pojazdu")).toHaveFocus();
+  });
+
+  it("finds the vehicle typed on the manual entry screen", () => {
+    openAt("/");
+    fireEvent.click(screen.getByRole("button", { name: "Wpisz numer boczny pojazdu" }));
+    fireEvent.change(screen.getByLabelText("Numer boczny pojazdu"), { target: { value: "1234" } });
+    fireEvent.click(screen.getByRole("button", { name: "Znajdź mój pojazd" }));
+    expect(screen.getByRole("heading", { name: "Szukamy Twojego autobusu…" })).toBeInTheDocument();
+    expect(screen.getByText("Pojazd 1234")).toBeInTheDocument();
+  });
+
+  it("keeps the gallery screen previews working", () => {
+    openAt("/#/manual");
+    expect(screen.getByRole("heading", { name: "Którym autobusem lub tramwajem jedziesz?" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Wpisz numer boczny pojazdu" })).not.toBeInTheDocument();
+  });
+
   it("leads from the start screen to manual entry and to the scanner", () => {
     openAt("/");
     fireEvent.click(screen.getByRole("button", { name: "Wpisz numer boczny pojazdu" }));

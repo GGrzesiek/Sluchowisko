@@ -1,13 +1,16 @@
 import { useState } from "react";
+import { flushSync } from "react-dom";
 import { App } from "./App";
 import { BusAnimation, Button } from "./components";
 import { screenFromUrl, type Screen } from "./navigation";
+import { ManualEntryScreen } from "./screens/ManualEntryScreen";
 import { PlaceholderScreen } from "./screens/PlaceholderScreen";
 import { QrScannerScreen } from "./screens/QrScannerScreen";
 import { StartScreen } from "./screens/StartScreen";
 
 export function ScreenSwitcher() {
-  if (window.location.hash === "#components") return <App />;
+  const hash = window.location.hash;
+  if (hash === "#components" || hash.startsWith("#/")) return <App />;
   return <CurrentScreen />;
 }
 
@@ -18,7 +21,7 @@ function CurrentScreen() {
     if (next.name === "start" && window.location.search) {
       window.history.replaceState(null, "", window.location.pathname);
     }
-    setScreen(next);
+    flushSync(() => setScreen(next));
   };
   const goToStart = () => goTo({ name: "start" });
 
@@ -31,7 +34,12 @@ function CurrentScreen() {
         />
       );
     case "vehicleNumber":
-      return <PlaceholderScreen title="Którym autobusem lub tramwajem jedziesz?" onBack={goToStart} />;
+      return (
+        <ManualEntryScreen
+          onBack={goToStart}
+          onSubmit={(vehicle) => goTo({ name: "findingVehicle", ride: { vehicle } })}
+        />
+      );
     case "qrScanner":
       return (
         <QrScannerScreen

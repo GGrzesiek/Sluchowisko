@@ -1,3 +1,5 @@
+import { isValidVehicleNumber } from "./screens/ManualEntryScreen";
+
 export interface Ride {
   vehicle: string;
   line?: string;
@@ -9,13 +11,12 @@ export type Screen =
   | { name: "qrScanner" }
   | { name: "findingVehicle"; ride: Ride };
 
-const VEHICLE = /^\d{4}$/;
 const LINE = /^[0-9A-Z]{1,4}$/;
 
 export function readRideFromUrl(search: string): Ride | null {
   const params = new URLSearchParams(search);
   const vehicle = params.get("vehicle")?.trim() ?? "";
-  if (!VEHICLE.test(vehicle)) return null;
+  if (!isValidVehicleNumber(vehicle)) return null;
   const line = params.get("line")?.trim().toUpperCase() ?? "";
   return LINE.test(line) ? { vehicle, line } : { vehicle };
 }
