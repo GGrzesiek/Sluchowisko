@@ -55,16 +55,22 @@ jobs:
             -F artifact_id="$ARTIFACT_ID" \
             -f pages_build_version="$GITHUB_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" \
             -f oidc_token="$oidc")
+          echo "$deployment"
           echo "page_url=$(jq -r .page_url <<<"$deployment")" >> "$GITHUB_OUTPUT"
-          id=$(jq -r .id <<<"$deployment")
+          id=$(jq -r '.id // (.status_url | split("/") | last)' <<<"$deployment")
+          errors=0
           for _ in $(seq 120); do
-            status=$(gh api "repos/$GITHUB_REPOSITORY/pages/deployments/$id" --jq .status)
+            sleep 5
+            if ! status=$(gh api "repos/$GITHUB_REPOSITORY/pages/deployments/$id" --jq .status); then
+              errors=$((errors + 1))
+              if [ "$errors" -ge 10 ]; then echo "::error::Cannot read Pages deployment status"; exit 1; fi
+              continue
+            fi
             echo "$status"
             case "$status" in
               succeed) exit 0 ;;
               deployment_failed|deployment_content_failed|deployment_cancelled|deployment_lost|deployment_attempt_error)
                 echo "::error::Pages deployment ended with $status"; exit 1 ;;
             esac
-            sleep 5
           done
           echo "::error::Pages deployment timed out"; exit 1
