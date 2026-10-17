@@ -14,26 +14,19 @@ Opis zgodny z § 4 ust. 4 regulaminu Warsaw Open Data Hackathon 2026.
 
 ## Przygotowanie historii
 
-Historie przygotowuje agent oparty na modelu Claude (Anthropic), uruchamiany w Claude Code ze skillami
-(`.claude/skills/`) i programem `story_agent`. Działa przed uruchomieniem aplikacji, w kilku krokach:
+Historie przygotowuje agent oparty na modelu Claude (Anthropic), uruchamiany w Claude Code jako subagent
+`stop-story-writer` (`.claude/agents/stop-story-writer.md`). Działa przed uruchomieniem aplikacji, osobno dla każdego
+przystanku:
 
-1. Skrypt bez AI zbiera dane o okolicy każdego przystanku: otwarte dane m.st. Warszawy, OpenStreetMap, Wikidata,
-   Wikipedię, Warszawikię i zdjęcia z licencją.
-2. Model czyta zebrany materiał, dociąga brakujące źródła z listy dozwolonych serwisów, wybiera fakty i układa plan
-   historii. Każdy fakt ma dosłowny cytat ze źródła, który program porównuje z tekstem źródła; program sprawdza też
-   wiarygodność źródeł i prawa do cytatów.
-3. Model pisze scenariusz słuchowiska (jeden, dwa lub trzy głosy, dźwięki, pauzy) i dłuższy tekst do czytania
-   wyłącznie z faktów z planu. Każde zdanie wskazuje swoje fakty. Głos epoki czyta tylko dosłowne cytaty z domeny
-   publicznej. Każdy dźwięk ilustruje fakt ze źródła.
-4. Model przygotowuje tekst dla syntezatora (liczby i skróty słownie, wskazówki intonacji) i opisy dźwięków. Program
-   sprawdza, że treść się nie zmieniła.
-5. Program nagrywa głosy, generuje dźwięki i muzykę w ElevenLabs, miksuje je i sprawdza długość nagrania.
-6. Człowiek przegląda historię i nagranie, zanim trafią do aplikacji.
-
-Research i tekst historii dla jednego przystanku przygotowuje też subagent `stop-story-writer`
-(`.claude/agents/stop-story-writer.md`). Sam wyszukuje i sprawdza źródła w sieci, zapisuje fakty z oceną pewności
-i pisze narrację (20–45 s) oraz tekst do czytania później. Każde zdanie musi mieć pokrycie w źródłach; rozbieżności
-między źródłami i fakty z jednego słabego źródła oddaje osobno, do sprawdzenia przez człowieka.
+1. Dostaje nazwę przystanku i sam wyszukuje źródła w sieci: encyklopedie, serwisy o historii Warszawy, opracowania
+   naukowe i źródła z epoki.
+2. Zapisuje fakty z oceną pewności. Fakt z jednego słabego źródła nie trafia do historii, a rozbieżności między
+   źródłami (np. różne daty) oddaje osobno.
+3. Wybiera historię, która łączy się z miejscem (co tu się wydarzyło, co widać z okna, skąd nazwa), i pisze narrację
+   na 20–45 sekund oraz dłuższy tekst do czytania później. Każde zdanie ma pokrycie w źródłach.
+4. Przed oddaniem sprawdza oba teksty zdanie po zdaniu: czy każde ma źródło, czy nie wyciąga wniosków z samej
+   zbieżności faktów i czy nie cytuje tekstów spoza domeny publicznej.
+5. Człowiek przegląda historię i jej źródła, zanim trafi do aplikacji.
 
 ## Przy tworzeniu oprogramowania
 
