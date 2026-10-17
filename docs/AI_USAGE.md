@@ -7,8 +7,9 @@ Opis zgodny z § 4 ust. 4 regulaminu Warsaw Open Data Hackathon 2026.
 - Aplikacja nie korzysta z modeli językowych w trakcie działania. Wszystkie historie są przygotowane wcześniej
   i zapisane jako pliki statyczne.
 - Narrację czyta syntetyczny głos (ElevenLabs). W aplikacji jest oznaczony jako głos AI.
-- Aplikacja nie pokazuje obrazów wygenerowanych przez AI. Zdjęcia i mapy pochodzą ze źródeł z licencją, a ich podpisy
-  podaje źródło.
+- Jedyny obraz wygenerowany przez AI to ilustracja autobusu „ogórek” w animacji na ekranie startowym i na ekranie
+  wyszukiwania pojazdu. Historie nie pokazują obrazów wygenerowanych przez AI: zdjęcia i mapy pochodzą ze źródeł
+  z licencją, a ich podpisy podaje źródło.
 
 ## Przygotowanie historii
 
