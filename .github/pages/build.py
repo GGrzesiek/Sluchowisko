@@ -1,28 +1,14 @@
-"""Buduje stronę GitHub Pages z aplikacji na gałęziach release i development.
-
-Użycie: python3 .github/pages/build.py <katalog_wyjściowy>
-
-- /      aplikacja z web/ na gałęzi release (produkcja)
-- /dev/  aplikacja z web/ na gałęzi development
-
-web/ jest publikowany bez zmian. Jeśli ma package.json, najpierw uruchamiane jest
-`npm ci && npm run build`, a publikowany jest web/dist. Ścieżka bazowa strony trafia
-do builda w zmiennej BASE_PATH (np. /opendatahackathon42/dev/).
-"""
-
 import html
 import os
 import shutil
 import subprocess
 import sys
 
-# (gałąź, podkatalog na stronie; "" to katalog główny)
 BRANCHES = [("release", ""), ("development", "dev")]
 BASE_PATH = os.environ.get("PAGES_BASE_PATH", "").rstrip("/")
 
 
 def copy_web(branch, slug, out_dir):
-    """Publikuje web/ z danej gałęzi w out_dir/slug. Zwraca True, jeśli było co publikować."""
     if subprocess.run(["git", "cat-file", "-e", f"origin/{branch}:web"], capture_output=True).returncode:
         return False
     tmp = os.path.join(out_dir, f".tmp-{slug or 'root'}")
@@ -58,11 +44,11 @@ def main():
 
 
 PLACEHOLDER = """<!doctype html>
-<html lang="pl">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Muzeum w autobusie</title>
+<title>Museum on the Bus</title>
 <style>
   :root {{ --bg:#f7f7f5; --fg:#1a1a1a; --muted:#6b6b6b; }}
   @media (prefers-color-scheme: dark) {{ :root {{ --bg:#141414; --fg:#ececec; --muted:#9a9a9a; }} }}
@@ -73,8 +59,8 @@ PLACEHOLDER = """<!doctype html>
 </head>
 <body>
 <div>
-  <h1>Muzeum w autobusie</h1>
-  <p class="muted">Gałąź <code>{branch}</code> nie ma jeszcze katalogu <code>web/</code>.</p>
+  <h1>Museum on the Bus</h1>
+  <p class="muted">Branch <code>{branch}</code> has no <code>web/</code> directory yet.</p>
 </div>
 </body>
 </html>

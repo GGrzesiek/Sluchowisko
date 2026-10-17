@@ -44,7 +44,4 @@ jobs:
       - id: deployment
         uses: actions/deploy-pages@v4
         env:
-          # Pages identyfikuje deploy po GITHUB_SHA i pomija ponowny deploy tej samej wersji.
-          # Po promocji release i development mają ten sam SHA, ale inną zawartość strony,
-          # więc każdy run dostaje własną wersję.
           GITHUB_SHA: ${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
