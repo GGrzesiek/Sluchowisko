@@ -19,7 +19,8 @@ Kod (`python -m story_agent …`) robi wszystko, co da się zrobić bez oceny: p
 
 1. Python ≥ 3.12 i zależności: `pip install -e .`
 2. `ffmpeg` w PATH (Windows: `winget install Gyan.FFmpeg`).
-3. `.env` w katalogu repo z `ELEVENLABS_API_KEY=…` (nigdy nie commitujesz `.env`).
+3. `ELEVENLABS_API_KEY=…` (i ewentualnie `FFMPEG_PATH=…`) w `.env` w repo albo poza repo: `../.env` lub
+   `../klucze_api.txt`. Kluczy nigdy nie commitujesz.
 4. Głosy: `python -m story_agent voices` pokazuje głosy z konta. Wpisz `voice_id` dla `narrator`, `co_narrator`, `archive` w `story_agent/voices.json` — różne barwy (np. mężczyzna i kobieta), najlepiej natywne polskie głosy.
 
 Bez klucza ElevenLabs agent dochodzi do kroku [4] i robi `render --dry-run`.
