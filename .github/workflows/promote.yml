@@ -10,9 +10,10 @@ on:
         required: false
         default: ""
 
+# Push idzie kluczem deploy (sekret PROMOTE_DEPLOY_KEY), bo tylko on może ominąć
+# ruleset na release. Taki push uruchamia też workflow Pages.
 permissions:
-  contents: write
-  actions: write
+  contents: read
 
 concurrency:
   group: promote
@@ -25,6 +26,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ssh-key: ${{ secrets.PROMOTE_DEPLOY_KEY }}
 
       - name: Fast-forward release
         id: ff
@@ -52,10 +54,3 @@ jobs:
           printf '### release → `%s` (`%s`)\n\n%s\n' "${target:0:7}" "$tag" "$changes" >> "$GITHUB_STEP_SUMMARY"
           echo "promoted=true" >> "$GITHUB_OUTPUT"
 
-      # Push wykonany tokenem GITHUB_TOKEN nie uruchamia innych workflowów,
-      # więc deploy Pages trzeba odpalić ręcznie.
-      - name: Deploy Pages
-        if: steps.ff.outputs.promoted == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh workflow run pages.yml --ref development
