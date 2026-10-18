@@ -2,11 +2,14 @@
 
 ## Jak odpowiadamy na wyzwanie „Złap oddech”
 
-Mieszkańcy Warszawy jeżdżą codziennie tą samą trasą i nie mają czasu ani siły szukać historii miejsc, które mijają.
-Słuchowisko zamienia dojazd w kilkadziesiąt sekund opowieści o tym, jak zwyczajne miejsce się zmieniało: co tu było,
-jak wyglądało i jak działało. Pasażer wpisuje numer taborowy pojazdu albo skanuje kod QR z naklejki, a aplikacja sama
-wie, który przystanek jest następny, i odtwarza historię, zanim pojazd do niego dojedzie. Podczas podróży można przeczytać
-dłuższy tekst, obejrzeć zdjęcia i otworzyć źródło każdego zdania.
+„Złap oddech” pyta, jak pomóc mieszkańcom zatrzymać się w pędzie dnia i nawiązać relację z miastem, w którym żyją.
+Mieszkańcy Warszawy jeżdżą codziennie tą samą trasą i mijają miejsca, o których nic nie wiedzą. Zamieniamy dojazd, który
+i tak trwa, w kilkadziesiąt sekund opowieści o tym, jak zwyczajne miejsce się zmieniało: co tu było, jak wyglądało i
+działało.
+
+Nauka o mieście odbywa się bez oporu. Pasażer wpisuje numer taborowy pojazdu albo skanuje kod QR z naklejki, a aplikacja
+sama wie, który przystanek jest następny, i odtwarza historię, zanim pojazd do niego dojedzie. Podczas podróży można
+przeczytać dłuższy tekst, obejrzeć zdjęcia i otworzyć źródło każdego zdania.
 
 ## Kryteria oceny
 
