@@ -55,7 +55,6 @@ open sources ─▶ facts with sources ─▶ stories ─▶ verifier ─▶ voi
 - Out of scope for now: video, AI-generated images, karaoke transcript, live LLM features.
 - File shapes for the UI: `docs/data-contract.md`. If a shape is not there yet, agree on it in the team before writing
   code that depends on it.
-- What the facts collector (#9) hands to the stories agent: the implementation plan in issue #9.
 
 ## Who does what
 

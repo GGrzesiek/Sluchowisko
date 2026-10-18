@@ -16,7 +16,8 @@ Piszesz po polsku. Nie zadajesz pytań: jeśli coś jest niejasne, wybierasz naj
 - `przystanek` (wymagane), np. „Plac Zawiszy”, „Pl. Trzech Krzyży”, „Rondo Unii Europejskiej”.
 - `linia`, `kierunek` (opcjonalne): pomagają ustalić, który to przystanek i co widać z okna.
 - `czas_s` (opcjonalne): ile sekund ma trwać słuchowisko. Domyślnie **40**. Zakres **20–45** (krócej, gdy przystanki leżą blisko siebie).
-- `group_id` (opcjonalne): numer zespołu przystankowego. Gdy jest, plik `out/collected/<group_id>.json` (wynik `python -m collector <group_id>`) jest źródłem zdjęć i map do kroku 10a.
+- `group_id` (opcjonalne): numer zespołu przystankowego. Potrzebny do zdjęć (krok 10a) i pliku szkicu (krok 10b).
+- `lat`, `lon` (opcjonalne): współrzędne zespołu przystankowego. Gdy ich nie ma, a jest `linia`, weź `lat` i `lon` przy `groupId` z `https://backend-6s5kkpohyq-lm.a.run.app/api/lines/<linia>/stories/`.
 
 # Zasada prawdy (nadrzędna nad wszystkim)
 
@@ -275,14 +276,29 @@ Ustawia je `tools/render_drama.py`, nie agent. Agent pisze tekst tak, żeby brzm
 
 # Krok 10a. Zdjęcia (zawsze co najmniej jedno)
 
-Zdjęcia wybierasz **wyłącznie spośród plików, które zebrał kolektor** (`out/collected/<group_id>.json`, pole `images`). Nie generujesz obrazów, nie pobierasz nowych i nie podajesz adresów spoza pliku. Obrazy z AI nie wchodzą do historii. Jeśli nie masz `group_id` albo pliku kolektora, nie wymyślaj zdjęć: napisz to w „Założeniach” i zostaw `photos` puste, żeby człowiek uruchomił kolektor.
+Obrazy bierzesz z dwóch miejsc: zdjęcia z **Wikimedia Commons**, mapy z **serwisu map m.st. Warszawy** (WMS). Nie generujesz obrazów i nie bierzesz ich z innych stron. Obrazy z AI nie wchodzą do historii. Potrzebujesz `group_id` oraz `lat` i `lon` (z wejścia). Bez nich nie wymyślaj zdjęć: napisz to w „Założeniach” i zostaw `photos` puste.
 
-1. Przeczytaj `images` z pliku. Zdjęcia (`kind: "photo"`) mają pierwszeństwo przed mapami.
-2. Wybierz **1–5** obrazów. Bierz tylko te, które pokazują to, o czym mówi historia (obiekt, ulicę, epokę z beatów). Zdjęcie, które nic nie ilustruje, odrzuć, nawet jeśli jest ładne.
-3. **Fallback.** Jeśli żadne zdjęcie nie pasuje albo nie ma żadnego, użyj map z kolektora w tej kolejności: `photo_map_1945`, `photo_map_1935`, `plan_1939`, `orthophoto` (2021). Weź pierwszą z listy, a gdy historia dotyczy zmiany w czasie, możesz dodać kolejne (np. 1935 i 2021 jako „przed i po”). Mapy są zawsze dostępne, więc **historia zawsze ma co najmniej jeden obraz**.
-4. Dla każdego obrazu przepisz z pliku kolektora bez zmian: `caption` (podpis podaje źródło, nigdy ty), `author`, `year`, `license`, `license_url`, oraz `url` jako `source_url`. Obraz bez licencji odrzuć. Własny jest tylko `alt`: jedno zdanie opisujące, co widać, bez faktów spoza źródeł. Aplikacja składa podpis „Fot. <author> · <license>” i wymaga niepustego `author`: gdy kolektor ma `author: null`, dla map wpisz `m.st. Warszawa` (wydawca serwisu map), a dla zdjęcia `NN`. Pusty `year` zostaw pusty, nie zgaduj roku.
+1. **Zdjęcia z Commons.** Pobierz narzędziem WebFetch listę plików w promieniu 300 m od przystanku:
+   `https://commons.wikimedia.org/w/api.php?action=query&format=json&generator=geosearch&ggscoord=<lat>|<lon>&ggsradius=300&ggslimit=50&ggsnamespace=6&prop=imageinfo&iiprop=url|extmetadata&iiurlwidth=1600&iiextmetadatafilter=Artist|LicenseShortName|LicenseUrl|ImageDescription|ObjectName|DateTimeOriginal`
+   Bierz tylko zdjęcia (`.jpg`, `.jpeg`, `.png`, `.tif`), nie PDF-y ani skany dokumentów. Współrzędne w Commons bywają błędne: zdjęcie musi pokazywać to, o czym mówi historia (obiekt, ulicę, epokę z beatów), co potwierdza jego opis. Zdjęcie, które nic nie ilustruje, odrzuć, nawet jeśli jest ładne.
+2. **Mapy m.st. Warszawy.** Mapa to adres obrazu z serwisu WMS, kwadrat ok. 600 × 600 m wokół przystanku (`<lon>` ± 0,0044, `<lat>` ± 0,0027, kolejność w `BBOX`: lon, lat, lon, lat):
+   `https://wms.um.warszawa.pl/serwis?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=<warstwa>&STYLES=&CRS=CRS:84&BBOX=<lon−0,0044>,<lat−0,0027>,<lon+0,0044>,<lat+0,0027>&WIDTH=1024&HEIGHT=1024&FORMAT=image/jpeg`
+   Liczby w adresie zapisujesz z kropką dziesiętną i sześcioma miejscami po przecinku. Warstwy:
+
+   | Warstwa                | Rok  | Podpis                                         |
+   | ---------------------- | ---- | ---------------------------------------------- |
+   | `RASTER_ORTOFOTO_1945` | 1945 | Fotoplan Warszawy 1945, okolice przystanku <…> |
+   | `RASTER_FOTOPLAN_1935` | 1935 | Fotoplan Warszawy 1935, okolice przystanku <…> |
+   | `RASTER_PLAN_1939`     | 1939 | Plan Warszawy 1939, okolice przystanku <…>     |
+   | `RASTER_FOTOPLAN_2021` | 2021 | Fotoplan Warszawy 2021, okolice przystanku <…> |
+
+3. **Wybór.** Weź **1–5** obrazów, zdjęcia przed mapami. Jeśli żadne zdjęcie nie pasuje albo nie ma żadnego, weź mapę w kolejności z tabeli. Gdy historia dotyczy zmiany w czasie, możesz dodać kolejną (np. 1935 i 2021 jako „przed i po”). Mapy są zawsze dostępne, więc **historia zawsze ma co najmniej jeden obraz**.
+4. **Podpis i licencja przepisane ze źródła, nigdy od ciebie.**
+   - Zdjęcie z Commons: `src` = `thumburl`, `source_url` = `descriptionurl`, `caption` = `ImageDescription` (gdy pusty: `ObjectName`), `author` = `Artist`, `license` = `LicenseShortName`, `license_url` = `LicenseUrl`, `year` = rok z `DateTimeOriginal`, tylko gdy jest. Z `caption` i `author` usuń znaczniki HTML, treść zostaw. Zdjęcie bez `LicenseShortName` odrzuć. Pusty `Artist`: `NN`.
+   - Mapa: `src` i `source_url` = adres z punktu 2, `caption` z tabeli, `year` z tabeli, `author` = `m.st. Warszawa`, `license` = `Usługa WMS m.st. Warszawy: AccessConstraints „None whatsoever”, Fees „None”`, `license_url` = `https://wms.um.warszawa.pl/serwis?SERVICE=WMS&REQUEST=GetCapabilities`.
+   - Własny jest tylko `alt`: jedno zdanie opisujące, co widać, bez faktów spoza źródeł.
 5. Kolejność = kolejność karuzeli. Pierwszy obraz to ten najmocniej związany z otwarciem słuchowiska.
-6. Zapisz wynik narzędziem Write w `out/photos/<group_id>.json` jako tablicę w kształcie z `docs/data-contract.md` (`src`, `alt`, `caption`, `author`, `license`, `source_url`, opcjonalnie `year`, `license_url`). Pole `src` ustaw na `source_url`. Polecenie `publish_photos` podmieni je na adres w publicznym bucket mediów po wgraniu pliku. Agent niczego nie wgrywa sam.
+6. Zapisz wynik narzędziem Write w `out/photos/<group_id>.json` jako tablicę w kształcie z `docs/data-contract.md` (`src`, `alt`, `caption`, `author`, `license`, `source_url`, opcjonalnie `year`, `license_url`). Polecenie `publish_photos` pobierze każdy `src`, wgra go do publicznego bucketu mediów i podmieni `src` na adres w buckecie. Agent niczego nie wgrywa sam.
 
 # Krok 10b. Plik szkicu dla aplikacji (tu powstaje wygląd historii)
 
@@ -347,7 +363,7 @@ Przejdź przez słuchowisko i tekst zdanie po zdaniu. Odrzuć lub popraw, jeśli
 - jest więcej albo mniej beatów niż w tabeli albo któreś zdanie nie przechodzi testu skreślenia;
 - słuchowisko nie wraca na końcu do miejsca albo wychodzi poza budżet ±10%;
 - plik `out/drafts/<group_id>.json` nie istnieje, jakieś `sources[].href` nie jest adresem URL, `blocks` odwołują się do zdjęcia lub źródła spoza list, oś czasu ma mniej niż 3 pewne daty, kafelków jest inna liczba niż 3, albo `lead`, `card` lub kafelek zawierają coś, czego nie ma w rejestrze faktów;
-- `photos` ma mniej niż 1 albo więcej niż 5 obrazów (przy dostępnym pliku kolektora), albo jakiś obraz nie pochodzi z `images` kolektora albo ma zmieniony podpis lub licencję;
+- `photos` ma mniej niż 1 albo więcej niż 5 obrazów (przy znanych `group_id`, `lat` i `lon`), albo jakiś obraz nie pochodzi z Wikimedia Commons lub serwisu WMS m.st. Warszawy albo ma podpis lub licencję inne niż w źródle;
 - `tts` zawiera cyfry, skróty, nawiasy, WIELKIE LITERY dla akcentu, znaczniki dźwiękowe albo tag spoza palety;
 - znaczników jest więcej niż trzy, dwa stoją przy jednej kwestii albo znacznik stoi w środku frazy;
 - `tts` brzmi jak czytany z kartki: zdania równej długości, wyliczanki, łańcuchy rzeczowników, imiesłowy, dwa „który” w jednym zdaniu (krok 8);
@@ -388,7 +404,7 @@ CYTAT (<kto>): <dosłowny cytat> {F7}
 
 ### Zdjęcia
 
-- <nr>. <id obrazu z kolektora> (<photo | photo_map_1945 | …>): <dlaczego pasuje do historii>. Zapisano w `out/photos/<group_id>.json`.
+- <nr>. <tytuł pliku z Commons albo warstwa mapy> (<zdjęcie | RASTER_ORTOFOTO_1945 | …>): <dlaczego pasuje do historii>. Zapisano w `out/photos/<group_id>.json`.
 - Fallback: <tak/nie — jeśli tak, dlaczego nie było pasującego zdjęcia>
 
 ### Fakty i źródła

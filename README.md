@@ -60,8 +60,8 @@ otwarte źródła ──▶ fakty ze źródłem ──▶ historie ──▶ wer
 2. **Pozycja pojazdu.** Backend co 10 s zna położenie pojazdów z API m.st. Warszawy. Dopasowuje pojazd do kierunku
    jazdy, przesuwa go wzdłuż trasy o drogę przejechaną od ostatniego odczytu i wylicza minione, bieżący i następne
    przystanki z czasem dojazdu.
-3. **Fakty.** Skrypt bez AI zbiera dla każdego zespołu przystankowego fakty z otwartych źródeł. Każdy fakt ma źródło,
-   licencję i dosłowny fragment tekstu.
+3. **Fakty.** Agent historii wyszukuje fakty o każdym zespole przystankowym w otwartych źródłach i zapisuje je w
+   rejestrze faktów ze źródłem i stopniem pewności. Fakt z jednego słabego źródła nie trafia do historii.
 4. **Historie.** Agent oparty na modelu językowym pisze historie wyłącznie z zebranych faktów, a weryfikator sprawdza
    każde zdanie. Historie powstają przed uruchomieniem aplikacji; aplikacja nie wywołuje modeli językowych.
    Szczegóły: [docs/AI_USAGE.md](docs/AI_USAGE.md).
@@ -130,29 +130,24 @@ Otwórz adres, który poda Vite, i wpisz jeden z tych numerów.
 
 API: `https://dane.um.warszawa.pl/api/action/<akcja>` oraz usługi mapowe Biura Geodezji i Katastru.
 
-| Zbiór                                 | Akcja lub warstwa                                                                          | Do czego służy                                      |
-| ------------------------------------- | ------------------------------------------------------------------------------------------ | --------------------------------------------------- |
-| Lokalizacja pojazdów                  | `get_ztm_lokalizacja_pojazdow`                                                             | pozycja pojazdu na żywo                             |
-| Przystanki komunikacji miejskiej      | `get_ztm_przystanki_komunikacji_miejskiej`                                                 | nazwy i współrzędne przystanków                     |
-| Linie na przystanku                   | `get_ztm_lista_linii_na_przystanku`                                                        | które linie zatrzymują się na przystanku            |
-| Odjazdy linii z przystanku            | `get_ztm_odjazdy_linii_z_przystanku`                                                       | kolejność przystanków na trasie                     |
-| Rejestr Cen Nieruchomości             | `get_bgk_rcn`                                                                              | mediana ceny m² w okolicy przystanku                |
-| Budżet obywatelski                    | `get_cks_budzet_obywatelski`                                                               | zrealizowane projekty w okolicy przystanku          |
-| Granice dzielnic, rejestr drzew (WFS) | `GRANICE_DZIELNIC`, `ZIELEN_DRZEWA`                                                        | dzielnica przystanku, największe drzewa w okolicy   |
-| Plany i fotoplany (WMS)               | `RASTER_FOTOPLAN_1935`, `RASTER_PLAN_1939`, `RASTER_ORTOFOTO_1945`, `RASTER_FOTOPLAN_2021` | jak wyglądała okolica przystanku w czterech epokach |
+| Zbiór                            | Akcja lub warstwa                                                                          | Do czego służy                                            |
+| -------------------------------- | ------------------------------------------------------------------------------------------ | --------------------------------------------------------- |
+| Lokalizacja pojazdów             | `get_ztm_lokalizacja_pojazdow`                                                             | pozycja pojazdu na żywo                                   |
+| Przystanki komunikacji miejskiej | `get_ztm_przystanki_komunikacji_miejskiej`                                                 | nazwy i współrzędne przystanków                           |
+| Linie na przystanku              | `get_ztm_lista_linii_na_przystanku`                                                        | które linie zatrzymują się na przystanku                  |
+| Odjazdy linii z przystanku       | `get_ztm_odjazdy_linii_z_przystanku`                                                       | kolejność przystanków na trasie                           |
+| Plany i fotoplany (WMS)          | `RASTER_FOTOPLAN_1935`, `RASTER_PLAN_1939`, `RASTER_ORTOFOTO_1945`, `RASTER_FOTOPLAN_2021` | zdjęcia w historii: okolica przystanku w czterech epokach |
 
 ## Pozostałe źródła i licencje
 
-| Źródło                   | Co z niego bierzemy                                      | Licencja               |
-| ------------------------ | -------------------------------------------------------- | ---------------------- |
-| OpenStreetMap (Overpass) | ulice, patroni, dawne nazwy, pomniki i tablice w okolicy | ODbL                   |
-| Wikipedia (pl)           | hasła o dzielnicach, ulicach, obiektach i patronach      | CC BY-SA 4.0           |
-| Wikidata                 | patroni, daty, status zabytku                            | CC0                    |
-| Warszawikia              | hasła o przystankach i ulicach                           | CC BY-SA               |
-| Wikimedia Commons        | zdjęcia z podpisem i autorem                             | licencja każdego pliku |
+| Źródło            | Co z niego bierzemy                                 | Licencja               |
+| ----------------- | --------------------------------------------------- | ---------------------- |
+| Wikipedia (pl)    | hasła o dzielnicach, ulicach, obiektach i patronach | CC BY-SA 4.0           |
+| Wikidata          | patroni, daty, status zabytku                       | CC0                    |
+| Warszawikia       | hasła o przystankach i ulicach                      | CC BY-SA               |
+| Wikimedia Commons | zdjęcia z podpisem i autorem                        | licencja każdego pliku |
 
-Pełna lista sprawdzonych źródeł, z decyzją, które bierzemy automatycznie, a które tylko jako link:
-[collector/README.md](collector/README.md#sources).
+Przy każdej historii aplikacja pokazuje listę źródeł, z których pochodzą jej fakty.
 
 Zasady, których się trzymamy:
 
