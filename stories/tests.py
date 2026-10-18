@@ -384,6 +384,7 @@ class PublishPhotosTest(TestCase):
         self.assertIn("User-agent", urlopen.call_args.args[0].headers)
         cmd = run.call_args.args[0]
         self.assertEqual(cmd[1:3], ["storage", "cp"])
+        self.assertEqual(Path(cmd[3]).suffix, ".jpg")
         self.assertRegex(cmd[4], rf"^gs://{MEDIA_BUCKET}/photos/7001/[0-9a-f]{{16}}\.jpg$")
         photo = Story.objects.get().photos[0]
         self.assertEqual(photo["src"], f"{MEDIA}/{cmd[4].split('/', 3)[3]}")
@@ -396,7 +397,9 @@ class PublishPhotosTest(TestCase):
         )
         Story.objects.create(group_id="7001", title="Alfa", narration="n", text="t", photos=[external_photo(src=wms)])
         _, run, _ = self.publish(response=self.response("image/png"))
-        self.assertTrue(run.call_args.args[0][4].endswith(".png"))
+        cmd = run.call_args.args[0]
+        self.assertEqual(Path(cmd[3]).suffix, ".png")
+        self.assertTrue(cmd[4].endswith(".png"))
 
     def test_skips_published_photos(self):
         Story.objects.create(group_id="7001", title="Alfa", narration="n", text="t", photos=story_payload()["photos"])
