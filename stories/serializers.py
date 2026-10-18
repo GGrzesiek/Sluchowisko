@@ -6,6 +6,7 @@ from . import media
 from .models import Story
 
 MAX_PHOTOS = 5
+CARD_ICONS = ["patron", "oldname", "bazaar", "cinema", "building", "river", "event"]
 
 
 class PhotoSerializer(serializers.Serializer):
@@ -39,9 +40,15 @@ class ImageBlockSerializer(serializers.Serializer):
     photo = serializers.IntegerField(min_value=0)
 
 
+class CardSerializer(serializers.Serializer):
+    icon = serializers.ChoiceField(choices=CARD_ICONS)
+    year = serializers.RegexField(r"^\d{4}$", required=False)
+
+
 class TimelineItemSerializer(serializers.Serializer):
-    year = serializers.RegexField(r"^\d{4}$")
+    year = serializers.RegexField(r"^(\d{4}|dziś)$")
     text = serializers.CharField()
+    tone = serializers.ChoiceField(choices=["past", "loss", "now"], required=False)
     sources = SourceRefsField(required=False)
 
 
@@ -50,10 +57,30 @@ class TimelineBlockSerializer(serializers.Serializer):
     items = TimelineItemSerializer(many=True, allow_empty=False)
 
 
+class FactItemSerializer(serializers.Serializer):
+    value = serializers.CharField(max_length=12)
+    label = serializers.CharField(max_length=24)
+    sources = SourceRefsField(required=False)
+
+
+class FactsBlockSerializer(serializers.Serializer):
+    type = serializers.ChoiceField(choices=["facts"])
+    items = FactItemSerializer(many=True, min_length=3, max_length=3)
+
+
+class CalloutBlockSerializer(serializers.Serializer):
+    type = serializers.ChoiceField(choices=["callout"])
+    title = serializers.CharField(max_length=60)
+    text = serializers.CharField(max_length=300)
+    sources = SourceRefsField(required=False)
+
+
 BLOCK_SERIALIZERS = {
     "paragraph": ParagraphBlockSerializer,
     "image": ImageBlockSerializer,
     "timeline": TimelineBlockSerializer,
+    "facts": FactsBlockSerializer,
+    "callout": CalloutBlockSerializer,
 }
 
 
@@ -64,12 +91,19 @@ def _plain_text(blocks):
             parts.append(block["text"])
         elif block["type"] == "timeline":
             parts.append("\n".join(f"{item['year']}: {item['text']}" for item in block["items"]))
+        elif block["type"] == "facts":
+            parts.append("\n".join(f"{item['value']} {item['label']}" for item in block["items"]))
+        elif block["type"] == "callout":
+            parts.append(f"{block['title']} {block['text']}")
     return "\n\n".join(parts)
 
 
 class StorySerializer(serializers.ModelSerializer):
     group_id = serializers.RegexField(r"^\d+$", max_length=10)
     title = serializers.CharField(max_length=200, required=False, allow_blank=True)
+    lead = serializers.CharField(max_length=300, required=False, allow_blank=True)
+    card = serializers.JSONField(required=False)
+    source_note = serializers.CharField(max_length=300, required=False, allow_blank=True)
     photos = PhotoSerializer(many=True, min_length=1, max_length=MAX_PHOTOS)
     sources = SourceSerializer(many=True, allow_empty=False)
     text = serializers.CharField(required=False, allow_blank=True)
@@ -80,6 +114,9 @@ class StorySerializer(serializers.ModelSerializer):
         fields = [
             "group_id",
             "title",
+            "lead",
+            "card",
+            "source_note",
             "narration",
             "text",
             "blocks",
@@ -99,6 +136,13 @@ class StorySerializer(serializers.ModelSerializer):
         if self.instance and self.instance.group_id != value:
             raise serializers.ValidationError("group_id cannot change.")
         return value
+
+    def validate_card(self, value):
+        if value in ({}, None):
+            return {}
+        serializer = CardSerializer(data=value)
+        serializer.is_valid(raise_exception=True)
+        return dict(serializer.validated_data)
 
     def validate_blocks(self, value):
         if not isinstance(value, list):
@@ -184,6 +228,17 @@ def story_photos(story):
     ]
 
 
+def _presentation(story):
+    extra = {}
+    if story.lead:
+        extra["lead"] = story.lead
+    if story.card:
+        extra["card"] = story.card
+    if story.source_note:
+        extra["sourceNote"] = story.source_note
+    return extra
+
+
 def story_content(story):
     return {
         "groupId": story.group_id,
@@ -194,6 +249,7 @@ def story_content(story):
         "body": {"format": "plain", "text": story.text},
         "blocks": story.blocks,
         "sources": story.sources,
+        **_presentation(story),
         **_story_audio(story),
     }
 
@@ -206,6 +262,7 @@ def story_location(story):
         "body": {"format": "plain", "text": story.text},
         "blocks": story.blocks,
         "sources": story.sources,
+        **_presentation(story),
     }
 
 

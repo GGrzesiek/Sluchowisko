@@ -39,19 +39,38 @@ export interface StorySource {
 
 export type StoryBody = { format: "plain"; text: string };
 
+export type TimelineTone = "past" | "loss" | "now";
+
 export interface TimelineItem {
   year: string;
   text: string;
+  tone?: TimelineTone;
   sources?: number[];
+}
+
+export interface FactItem {
+  value: string;
+  label: string;
+  sources?: number[];
+}
+
+export interface StoryCardInfo {
+  icon: StoryIconKind;
+  year?: string;
 }
 
 export type StoryBlock =
   | { type: "paragraph"; text: string; sources?: number[] }
   | { type: "image"; photo: number }
-  | { type: "timeline"; items: TimelineItem[] };
+  | { type: "timeline"; items: TimelineItem[] }
+  | { type: "facts"; items: [FactItem, FactItem, FactItem] }
+  | { type: "callout"; title: string; text: string; sources?: number[] };
 
 export interface StoryContent {
   title: string;
+  lead?: string;
+  card?: StoryCardInfo;
+  sourceNote?: string;
   photos: [StoryPhoto, ...StoryPhoto[]];
   body: StoryBody;
   blocks?: StoryBlock[];

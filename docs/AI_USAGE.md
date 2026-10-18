@@ -29,9 +29,12 @@ przystanku:
 4. Pisze tekst narracji pod mowę, nie pod czytanie: zdania różnej długości, bez wyliczanek, liczby słownie, najwyżej
    trzy znaczniki audio (np. ton ciepły, zamyślony, pauza przed puentą) i zapisy wymowy dla skrótowców i obcych
    nazw.
-5. Przed oddaniem sprawdza oba teksty zdanie po zdaniu: czy każde ma źródło, czy nie wyciąga wniosków z samej
+5. Dobiera od jednego do pięciu zdjęć lub map spośród plików zebranych wcześniej przez skrypt bez AI (kolektor),
+   bez generowania obrazów i bez zmiany podpisów oraz licencji. Gdy żadne zdjęcie nie pasuje, historia dostaje
+   starą mapę Warszawy z serwisu miasta (1945, 1935, 1939, 2021).
+6. Przed oddaniem sprawdza oba teksty zdanie po zdaniu: czy każde ma źródło, czy nie wyciąga wniosków z samej
    zbieżności faktów i czy nie cytuje tekstów spoza domeny publicznej.
-6. Człowiek przegląda historię i jej źródła, zanim trafi do aplikacji.
+7. Człowiek przegląda historię i jej źródła, zanim trafi do aplikacji.
 
 Nagranie powstaje skryptem `tools/render_drama.py`. Narrację czyta syntetyczny głos ElevenLabs (model Eleven v4,
 z ustalonymi ustawieniami stabilności i podobieństwa głosu oraz stałym seedem, żeby kolejne nagrania brzmiały tak

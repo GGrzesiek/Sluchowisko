@@ -9,6 +9,9 @@ class Story(models.Model):
 
     group_id = models.CharField(max_length=10, unique=True)
     title = models.CharField(max_length=200)
+    lead = models.CharField(max_length=300, blank=True)
+    card = models.JSONField(default=dict, blank=True)
+    source_note = models.CharField(max_length=300, blank=True)
     narration = models.TextField()
     text = models.TextField(blank=True)
     blocks = models.JSONField(default=list, blank=True)

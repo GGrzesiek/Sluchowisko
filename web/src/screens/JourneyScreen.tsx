@@ -4,6 +4,7 @@ import {
   PhotoCarousel,
   RouteStrip,
   SourceList,
+  StoryBlocks,
   StoryHeading,
   StoryText,
   UiIcon,
@@ -100,9 +101,13 @@ export function JourneyScreen({ ride, story, onClose }: JourneyScreenProps) {
         </div>
       </section>
       <section className="flex flex-col gap-5 pb-32 pt-4">
-        <StoryHeading title={story.title} />
-        <StoryText body={story.body} />
-        <SourceList sources={story.sources} />
+        <StoryHeading title={story.title} lead={story.lead} />
+        {story.blocks && story.blocks.length > 0 ? (
+          <StoryBlocks blocks={story.blocks} photos={story.photos} />
+        ) : (
+          <StoryText body={story.body} />
+        )}
+        <SourceList sources={story.sources} note={story.sourceNote} />
       </section>
       {story.audio && (
         <NowPlayingBar

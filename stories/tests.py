@@ -207,6 +207,149 @@ def external_photo(**extra):
     return {**story_payload()["photos"][0], "src": f"{COMMONS}?raw", "source_url": COMMONS, **extra}
 
 
+class ImportStoryTest(TestCase):
+    def setUp(self):
+        Stop.objects.create(zespol="7001", slupek="01", name="Alfa", lat=52.20, lon=21.0)
+        self.out = Path(tempfile.mkdtemp()) / "out"
+        (self.out / "drafts").mkdir(parents=True)
+        (self.out / "photos").mkdir()
+        self.write(
+            "drafts",
+            "7001",
+            {
+                "narration": "Krótka narracja.",
+                "text": "Dłuższy tekst.",
+                "sources": [{"label": "Wikipedia", "href": "https://pl.wikipedia.org/wiki/Alfa"}],
+            },
+        )
+        self.write("photos", "7001", [external_photo()])
+
+    def write(self, folder, group_id, content):
+        (self.out / folder / f"{group_id}.json").write_text(json.dumps(content), encoding="utf-8")
+
+    def run_import(self, *args):
+        stdout = io.StringIO()
+        call_command("import_story", "--out", str(self.out), *args, stdout=stdout)
+        return stdout.getvalue()
+
+    def test_creates_a_draft_with_the_stop_name_as_title(self):
+        self.run_import("7001")
+        story = Story.objects.get(group_id="7001")
+        self.assertEqual(story.status, Story.Status.DRAFT)
+        self.assertEqual(story.title, "Alfa")
+        self.assertEqual(story.generated_by, "stop-story-writer")
+        self.assertEqual(story.photos[0]["source_url"], COMMONS)
+
+    def test_blocks_are_kept_and_text_is_built_from_them(self):
+        blocks = [
+            {"type": "paragraph", "text": "Pierwszy akapit.", "sources": [1]},
+            {"type": "image", "photo": 0},
+            {"type": "timeline", "items": [{"year": "1936", "text": "Otwarcie.", "sources": [1]}]},
+        ]
+        self.write("drafts", "7001", {**json.loads((self.out / "drafts" / "7001.json").read_text()), "blocks": blocks})
+        draft = json.loads((self.out / "drafts" / "7001.json").read_text())
+        del draft["text"]
+        self.write("drafts", "7001", draft)
+        self.run_import("7001")
+        story = Story.objects.get(group_id="7001")
+        self.assertEqual([b["type"] for b in story.blocks], ["paragraph", "image", "timeline"])
+        self.assertEqual(story.text, "Pierwszy akapit.\n\n1936: Otwarcie.")
+
+    def draft(self, **extra):
+        draft = json.loads((self.out / "drafts" / "7001.json").read_text())
+        self.write("drafts", "7001", {**draft, **extra})
+
+    def test_presentation_fields_and_new_blocks_reach_the_content(self):
+        facts = {"type": "facts", "items": [{"value": str(n), "label": "PRZĘSEŁ"} for n in (1, 2, 3)]}
+        callout = {
+            "type": "callout",
+            "title": "Wyjrzyj przez okno.",
+            "text": "Balustrady nie odbudowano.",
+            "sources": [1],
+        }
+        timeline = {"type": "timeline", "items": [{"year": "dziś", "text": "Jedziesz tędy.", "tone": "now"}]}
+        self.draft(
+            lead="Odbudowany dwa razy.",
+            card={"icon": "bazaar", "year": "1902"},
+            source_note="Zdjęcia: Commons.",
+            blocks=[facts, callout, timeline],
+        )
+        self.run_import("7001")
+        content = story_content(Story.objects.get(group_id="7001"))
+        self.assertEqual(content["lead"], "Odbudowany dwa razy.")
+        self.assertEqual(content["card"], {"icon": "bazaar", "year": "1902"})
+        self.assertEqual(content["sourceNote"], "Zdjęcia: Commons.")
+        self.assertEqual([b["type"] for b in content["blocks"]], ["facts", "callout", "timeline"])
+
+    def test_content_omits_empty_presentation_fields(self):
+        self.run_import("7001")
+        content = story_content(Story.objects.get(group_id="7001"))
+        for key in ("lead", "card", "sourceNote"):
+            self.assertNotIn(key, content)
+
+    def test_facts_need_exactly_three_items(self):
+        self.draft(blocks=[{"type": "facts", "items": [{"value": "8", "label": "PRZĘSEŁ"}]}])
+        with self.assertRaisesMessage(CommandError, "7001"):
+            self.run_import("7001")
+
+    def test_unknown_card_icon_fails(self):
+        self.draft(card={"icon": "castle"})
+        with self.assertRaisesMessage(CommandError, "7001"):
+            self.run_import("7001")
+
+    def test_block_pointing_at_a_missing_photo_fails(self):
+        draft = json.loads((self.out / "drafts" / "7001.json").read_text())
+        self.write("drafts", "7001", {**draft, "blocks": [{"type": "image", "photo": 3}]})
+        with self.assertRaisesMessage(CommandError, "photo 3 does not exist"):
+            self.run_import("7001")
+
+    def test_all_imports_every_draft_file(self):
+        self.assertIn("Imported 1 drafts", self.run_import("--all"))
+        self.assertEqual(Story.objects.count(), 1)
+
+    def test_dry_run_writes_nothing(self):
+        self.assertIn("Would import 1", self.run_import("7001", "--dry-run"))
+        self.assertFalse(Story.objects.exists())
+
+    def test_reimport_updates_the_draft(self):
+        self.run_import("7001")
+        self.write("drafts", "7001", {**json.loads((self.out / "drafts" / "7001.json").read_text()), "text": "Nowy."})
+        self.run_import("7001")
+        self.assertEqual(Story.objects.get(group_id="7001").text, "Nowy.")
+
+    def test_verified_story_is_kept_without_force(self):
+        Story.objects.create(group_id="7001", title="Alfa", narration="n", text="t", status="verified", photos=[])
+        self.assertIn("already verified", self.run_import("7001"))
+        self.assertEqual(Story.objects.get().status, "verified")
+        self.run_import("7001", "--force")
+        self.assertEqual(Story.objects.get().status, "draft")
+
+    def test_changed_narration_clears_the_recording(self):
+        Story.objects.create(
+            group_id="7001", title="Alfa", narration="stara", text="t", photos=[], audio_url="https://x/a.mp3"
+        )
+        Story.objects.filter(group_id="7001").update(audio_url="https://x/a.mp3", audio_seconds=100)
+        self.run_import("7001", "--force")
+        self.assertEqual(Story.objects.get().audio_url, "")
+
+    def test_invalid_draft_fails_and_names_the_group(self):
+        self.write("photos", "7001", [])
+        with self.assertRaisesMessage(CommandError, "7001"):
+            self.run_import("7001")
+        self.assertFalse(Story.objects.exists())
+
+    def test_missing_photos_file_fails(self):
+        (self.out / "photos" / "7001.json").unlink()
+        with self.assertRaisesMessage(CommandError, "Missing"):
+            self.run_import("7001")
+
+    def test_unknown_stop_group_fails(self):
+        self.write("drafts", "9999", {"narration": "n", "text": "t", "sources": []})
+        self.write("photos", "9999", [external_photo()])
+        with self.assertRaisesMessage(CommandError, "Unknown stop group"):
+            self.run_import("9999")
+
+
 @override_settings(STORIES_WRITE_TOKEN=TOKEN, GCS_MEDIA_BUCKET=MEDIA_BUCKET)
 class PublishPhotosTest(TestCase):
     def setUp(self):

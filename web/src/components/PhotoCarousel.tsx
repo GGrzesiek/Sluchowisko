@@ -54,7 +54,7 @@ export function PhotoCarousel({ photos, height = 260, visibleHeight = height, cl
           visibleHeight > 0 ? "mt-2 max-h-24 opacity-100" : "max-h-0 opacity-0",
         )}
       >
-        <span className="text-[15px] leading-[1.35]">
+        <span title={current.caption} className="line-clamp-2 text-[15px] leading-[1.35]">
           <MonoLabel tone="bus">{current.year}</MonoLabel> · {current.caption}
         </span>
         <PhotoCredit text={current.credit} overlay={false} />

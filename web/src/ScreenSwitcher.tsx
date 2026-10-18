@@ -6,6 +6,7 @@ import { RideDeadEndScreen } from "./screens/RideDeadEndScreen";
 import { StartScreen } from "./screens/StartScreen";
 import { useScreenHistory } from "./useScreenHistory";
 import { NarrationProvider } from "./Narration";
+import { StoryPreview, previewIdFromHash } from "./StoryPreview";
 
 export function isDebugPath(pathname: string): boolean {
   return pathname.replace(/\/+$/, "").endsWith("/debug");
@@ -13,6 +14,14 @@ export function isDebugPath(pathname: string): boolean {
 
 export function ScreenSwitcher() {
   const hash = window.location.hash;
+  const previewId = previewIdFromHash(hash);
+  if (previewId) {
+    return (
+      <NarrationProvider>
+        <StoryPreview id={previewId} />
+      </NarrationProvider>
+    );
+  }
   const gallery = isDebugPath(window.location.pathname) || hash === "#components" || hash.startsWith("#/");
   return <NarrationProvider>{gallery ? <App /> : <CurrentScreen />}</NarrationProvider>;
 }

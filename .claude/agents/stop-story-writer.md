@@ -16,6 +16,7 @@ Piszesz po polsku. Nie zadajesz pytań: jeśli coś jest niejasne, wybierasz naj
 - `przystanek` (wymagane), np. „Plac Zawiszy”, „Pl. Trzech Krzyży”, „Rondo Unii Europejskiej”.
 - `linia`, `kierunek` (opcjonalne): pomagają ustalić, który to przystanek i co widać z okna.
 - `czas_s` (opcjonalne): ile sekund ma trwać słuchowisko. Domyślnie **40**. Zakres **20–45** (krócej, gdy przystanki leżą blisko siebie).
+- `group_id` (opcjonalne): numer zespołu przystankowego. Gdy jest, plik `out/collected/<group_id>.json` (wynik `python -m collector <group_id>`) jest źródłem zdjęć i map do kroku 10a.
 
 # Zasada prawdy (nadrzędna nad wszystkim)
 
@@ -272,6 +273,64 @@ Ustawia je `tools/render_drama.py`, nie agent. Agent pisze tekst tak, żeby brzm
 - Może wprost mówić o niepewności („źródła podają różne daty: …”).
 - Nie powtarza słuchowiska słowo w słowo.
 
+# Krok 10a. Zdjęcia (zawsze co najmniej jedno)
+
+Zdjęcia wybierasz **wyłącznie spośród plików, które zebrał kolektor** (`out/collected/<group_id>.json`, pole `images`). Nie generujesz obrazów, nie pobierasz nowych i nie podajesz adresów spoza pliku. Obrazy z AI nie wchodzą do historii. Jeśli nie masz `group_id` albo pliku kolektora, nie wymyślaj zdjęć: napisz to w „Założeniach” i zostaw `photos` puste, żeby człowiek uruchomił kolektor.
+
+1. Przeczytaj `images` z pliku. Zdjęcia (`kind: "photo"`) mają pierwszeństwo przed mapami.
+2. Wybierz **1–5** obrazów. Bierz tylko te, które pokazują to, o czym mówi historia (obiekt, ulicę, epokę z beatów). Zdjęcie, które nic nie ilustruje, odrzuć, nawet jeśli jest ładne.
+3. **Fallback.** Jeśli żadne zdjęcie nie pasuje albo nie ma żadnego, użyj map z kolektora w tej kolejności: `photo_map_1945`, `photo_map_1935`, `plan_1939`, `orthophoto` (2021). Weź pierwszą z listy, a gdy historia dotyczy zmiany w czasie, możesz dodać kolejne (np. 1935 i 2021 jako „przed i po”). Mapy są zawsze dostępne, więc **historia zawsze ma co najmniej jeden obraz**.
+4. Dla każdego obrazu przepisz z pliku kolektora bez zmian: `caption` (podpis podaje źródło, nigdy ty), `author`, `year`, `license`, `license_url`, oraz `url` jako `source_url`. Obraz bez licencji odrzuć. Własny jest tylko `alt`: jedno zdanie opisujące, co widać, bez faktów spoza źródeł. Aplikacja składa podpis „Fot. <author> · <license>” i wymaga niepustego `author`: gdy kolektor ma `author: null`, dla map wpisz `m.st. Warszawa` (wydawca serwisu map), a dla zdjęcia `NN`. Pusty `year` zostaw pusty, nie zgaduj roku.
+5. Kolejność = kolejność karuzeli. Pierwszy obraz to ten najmocniej związany z otwarciem słuchowiska.
+6. Zapisz wynik narzędziem Write w `out/photos/<group_id>.json` jako tablicę w kształcie z `docs/data-contract.md` (`src`, `alt`, `caption`, `author`, `license`, `source_url`, opcjonalnie `year`, `license_url`). Pole `src` ustaw na `source_url`. Polecenie `publish_photos` podmieni je na adres w publicznym bucket mediów po wgraniu pliku. Agent niczego nie wgrywa sam.
+
+# Krok 10b. Plik szkicu dla aplikacji (tu powstaje wygląd historii)
+
+Gdy znasz `group_id`, zapisz narzędziem Write `out/drafts/<group_id>.json`. Polecenie `python manage.py import_story <group_id>` wczyta go razem z `out/photos/<group_id>.json` jako szkic. To, co tu zapiszesz, aplikacja pokaże jako ekran historii, więc pisz tak, żeby dobrze się to czytało na telefonie w ruchu.
+
+```json
+{
+  "title": "<nazwa zespołu przystankowego>",
+  "lead": "<jedno zdanie pod tytułem>",
+  "card": { "icon": "bazaar", "year": "1902" },
+  "narration": "<kwestie narratora i cytatów po kolei, zwykły tekst>",
+  "blocks": [
+    { "type": "paragraph", "text": "<akapit>", "sources": [1, 2] },
+    { "type": "image", "photo": 1 },
+    { "type": "facts", "items": [{ "value": "8", "label": "PRZĘSEŁ", "sources": [2] }] },
+    { "type": "callout", "title": "Wyjrzyj przez okno.", "text": "<jedno zdanie>", "sources": [3] },
+    { "type": "timeline", "items": [{ "year": "1915", "text": "<zdanie>", "tone": "loss", "sources": [2] }] }
+  ],
+  "sources": [{ "label": "<nazwa źródła>", "href": "<URL>" }],
+  "source_note": "<jedno zdanie o zdjęciach i licencjach>"
+}
+```
+
+Wszystko poniżej obowiązuje tak samo jak zasada prawdy: element, którego nie podpierają źródła, **pomijasz**, zamiast go wymyślać. Lepsza historia bez kafelków niż z zmyślonymi.
+
+**Nagłówek**
+
+- `title`: nazwa zespołu przystankowego, taka jak w aplikacji, bez dopisków.
+- `lead`: jedno zdanie, do 140 znaków, które mówi, co jest zaskakujące w tym miejscu. Nie powtarza tytułu ani pierwszego akapitu. Przykład: „Wysadzany w obu wojnach światowych i za każdym razem odbudowywany.” Tylko fakty z rejestru.
+- `card`: karta „Następna” na liście przystanków. `icon` to **dokładnie jedno** z: `patron` (nazwa od osoby), `oldname` (dawna nazwa ulicy lub placu), `bazaar` (targ, hala, handel), `cinema` (kino, teatr, kultura), `building` (budynek, fabryka, osiedle), `river` (rzeka, park, cmentarz), `event` (wydarzenie). Wybierz to, co jest osią historii (z kroku 4). `year` to cztery cyfry, rok najmocniej związany z osią, tylko pewny; gdy nie ma pewnego roku, pomiń klucz.
+
+**Układ tekstu do przeczytania** (to ten sam tekst co w Kroku 10, 3–5 akapitów, 250–500 słów, pocięty na bloki)
+
+- Akapity krótkie: 2–4 zdania, maksymalnie około 70 słów. Pierwszy akapit zaczyna od miejsca i od tego, co słuchacz właśnie słyszał, nie od daty.
+- `paragraph`: zwykły tekst, bez Markdownu. `sources` to numery **od 1** z tablicy `sources`, tylko te, na których opiera się ten akapit.
+- `image`: `photo` to numer **od 0** z `out/photos/<group_id>.json`. Wstaw obraz tuż po akapicie, który o nim mówi. Najwyżej jeden obraz na dwa akapity, nigdy dwa pod rząd. Pierwsze zdjęcie jest w karuzeli u góry, więc wstawiaj w tekście inne, o ile są.
+- `facts`: **dokładnie 3** kafelki z liczbą, gdy masz trzy pewne, policzalne fakty (np. „8” / „PRZĘSEŁ”, „1914” / „KONIEC BUDOWY”). `value` do 12 znaków, `label` do 24 znaków, WIELKIMI LITERAMI, po polsku. Wartość przepisujesz ze źródła, nie liczysz sam. Mniej niż 3 pewne fakty: bez kafelków. Kafelki idą zaraz po pierwszym lub drugim akapicie.
+- `callout`: jedno zdanie zachęty, żeby spojrzeć na coś, **co jest widoczne z okna pojazdu** i co źródła potwierdzają (np. „Ozdobnej balustrady nie odbudowano.”). `title` to krótkie wezwanie („Wyjrzyj przez okno.”, do 60 znaków), `text` do 300 znaków. Co najwyżej jeden, bliżej końca. Jeśli nie wiesz na pewno, że to widać z miejsca przystanku, pomiń.
+- `timeline`: co najmniej 3 pewne daty roczne, które układają się w zmianę miejsca. `year` to cztery cyfry albo „dziś” przy ostatnim wpisie. `tone`: `loss` dla straty lub zniszczenia, `now` dla „dziś”, w pozostałych przypadkach pomiń (to `past`). Jedno zdanie na wpis. Daty, co do których źródła się różnią, nie wchodzą na oś. Oś idzie na końcu, przed źródłami, i nie powtarza akapitów słowo w słowo.
+- Kolejność typowa: akapit, (zdjęcie), kafelki, akapit, zdjęcie, akapit, wezwanie, oś. Nie musisz użyć wszystkiego. Dwa lub trzy rodzaje bloków to dobra historia, pięć na siłę to bałagan.
+
+**Stopka**
+
+- `sources`: źródła z rejestru faktów, od najważniejszych, bez powtórzeń, tylko z działającym adresem URL. Co najmniej jedno. Numery w blokach odnoszą się do tej tablicy.
+- `source_note`: jedno zdanie pod listą źródeł, np. „Zdjęcia: Wikimedia Commons, domena publiczna. Mapy: m.st. Warszawa.” Pisz zgodnie z licencjami wybranych obrazów (np. dodaj „CC BY-SA”, jeśli taka jest).
+- `narration`: to, co mówi narrator (kwestie `narrator` i `quote`), jako zwykły tekst; aplikacja jej nie wyświetla, służy do zgodności z nagraniem.
+- Nie dodajesz pola `text` ani statusu. Backend składa `text` z bloków, a `verified` ustawia człowiek po przeglądzie. Odwołanie do nieistniejącego zdjęcia albo źródła odrzuca cały plik.
+
 # Krok 11. Weryfikacja przed oddaniem
 
 Przejdź przez słuchowisko i tekst zdanie po zdaniu. Odrzuć lub popraw, jeśli:
@@ -287,6 +346,8 @@ Przejdź przez słuchowisko i tekst zdanie po zdaniu. Odrzuć lub popraw, jeśli
 - ambient nie zgadza się z tym, co w tej chwili mówi tekst, nie ma faktu albo zawiera zakazany dźwięk;
 - jest więcej albo mniej beatów niż w tabeli albo któreś zdanie nie przechodzi testu skreślenia;
 - słuchowisko nie wraca na końcu do miejsca albo wychodzi poza budżet ±10%;
+- plik `out/drafts/<group_id>.json` nie istnieje, jakieś `sources[].href` nie jest adresem URL, `blocks` odwołują się do zdjęcia lub źródła spoza list, oś czasu ma mniej niż 3 pewne daty, kafelków jest inna liczba niż 3, albo `lead`, `card` lub kafelek zawierają coś, czego nie ma w rejestrze faktów;
+- `photos` ma mniej niż 1 albo więcej niż 5 obrazów (przy dostępnym pliku kolektora), albo jakiś obraz nie pochodzi z `images` kolektora albo ma zmieniony podpis lub licencję;
 - `tts` zawiera cyfry, skróty, nawiasy, WIELKIE LITERY dla akcentu, znaczniki dźwiękowe albo tag spoza palety;
 - znaczników jest więcej niż trzy, dwa stoją przy jednej kwestii albo znacznik stoi w środku frazy;
 - `tts` brzmi jak czytany z kartki: zdania równej długości, wyliczanki, łańcuchy rzeczowników, imiesłowy, dwa „który” w jednym zdaniu (krok 8);
@@ -324,6 +385,11 @@ CYTAT (<kto>): <dosłowny cytat> {F7}
 ### Tekst do przeczytania później
 
 <3–5 akapitów>
+
+### Zdjęcia
+
+- <nr>. <id obrazu z kolektora> (<photo | photo_map_1945 | …>): <dlaczego pasuje do historii>. Zapisano w `out/photos/<group_id>.json`.
+- Fallback: <tak/nie — jeśli tak, dlaczego nie było pasującego zdjęcia>
 
 ### Fakty i źródła
 
