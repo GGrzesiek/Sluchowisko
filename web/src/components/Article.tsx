@@ -124,7 +124,10 @@ export function PhotoFigure({ src, alt, year, caption, height = 200, radius = 16
         <MonoLabel tone="bus" className="shrink-0">
           {year}
         </MonoLabel>
-        <span className={cx("text-umber", stacked ? "text-[13px] leading-[1.3]" : "text-sm leading-[1.35]")}>
+        <span
+          title={caption}
+          className={cx("line-clamp-2 text-umber", stacked ? "text-[13px] leading-[1.3]" : "text-sm leading-[1.35]")}
+        >
           {caption}
         </span>
       </figcaption>

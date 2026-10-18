@@ -26,14 +26,11 @@ Each stop in `RideInfo.stops` has `groupId`, the stop group id (`zespol`) used b
   "vehicle": "3122",
   "line": "22",
   "destination": "Wiatraczna",
-  "stops": [
-    { "name": "Okopowa", "groupId": "5004", "state": "passed" | "current" | "next" | "upcoming",
-      "etaMinutes": 4, "hasStory": true }
-  ]
+  "stops": [{ "name": "Okopowa", "groupId": "5004", "state": "next", "etaMinutes": 4, "hasStory": true }]
 }
 ```
 
-`etaMinutes` is missing for passed and current stops. `hasStory` is missing when the stop group has no verified story.
+`state` is one of `passed`, `current`, `next` or `upcoming`. `etaMinutes` is missing for passed and current stops. `hasStory` is missing when the stop group has no verified story.
 
 `location` is about the stop group that is `current` in the last `route`. `story` is `null` when that group has no
 verified story. Drafts and rejected stories are never sent.
@@ -167,6 +164,28 @@ narration, loses its recording until the next `sync_audio`.
 `GET /api/stories/<groupId>/` and the static files from `python manage.py export_stories` return `StoryContent`
 (`web/src/types.ts`) plus `groupId` and `narration`. When the story has a recording, it also has `audio` (the public
 URL, as in `StoryContent.audio?: string`), `audioSeconds` and `aiVoice: true`; without one these keys are absent.
+
+## Importing the agent's output
+
+`python manage.py import_story <group_id>... | --all [--out out] [--force] [--dry-run]` reads two files per stop group
+and saves them as a story with status `draft`:
+
+- `out/drafts/<group_id>.json`: `narration`, `blocks`, `sources` (`label`, `href`), optional `title`, `lead`, `card`, `source_note` and `text`;
+- `out/photos/<group_id>.json`: the `photos` array (1 to 5 items, shape as in "Writing a story").
+
+The data goes through the same validation as `PUT /api/stories/<group_id>/`, so an unknown stop group, a missing
+photo or source, or a bad block fails that group and names it. A story that is already `verified` or `rejected` is
+skipped unless `--force` is given, which replaces it with the new draft; a changed narration clears its recording.
+`--all` imports every file in `out/drafts`.
+
+The agent also writes presentation fields: `lead` (one sentence under the title), `card` (`icon` is one of `patron`,
+`oldname`, `bazaar`, `cinema`, `building`, `river`, `event`; optional four-digit `year`) and `source_note` (one sentence
+under the source list). They are sent as `lead`, `card` and `sourceNote` and are absent when empty.
+
+Block types: `paragraph` (`text`, `sources`), `image` (`photo`), `timeline` (`items` with `year` as four digits or
+`dziś`, `text`, optional `tone` of `past`, `loss` or `now`, `sources`), `facts` (exactly 3 `items` with `value` up to 12
+and `label` up to 24 characters, `sources`) and `callout` (`title`, `text`, `sources`). Source numbers start at 1 and
+photo numbers at 0. The agent writes no `text`; the backend builds it from the blocks.
 
 ## Writing a story
 
