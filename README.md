@@ -1,8 +1,9 @@
 # Słuchowisko
 
-Aplikacja, która w trakcie jazdy autobusem lub tramwajem po Warszawie opowiada krótkie historie mijanych miejsc.
-Pasażer podaje numer boczny pojazdu albo skanuje kod QR z naklejki, a aplikacja pokazuje trasę, najbliższe przystanki
-i historię miejsca, które właśnie mija. Każde zdanie historii ma źródło, które można otworzyć („Skąd to wiemy?”).
+Aplikacja, która w trakcie jazdy autobusem lub tramwajem po Warszawie opowiada historie mijanych miejsc w formie
+krótkich słuchowisk. Pasażer podaje numer boczny pojazdu albo skanuje kod QR z naklejki, a aplikacja pokazuje trasę,
+najbliższe przystanki i historię miejsca, które właśnie mija: nagranie, tekst do przeczytania i zdjęcia. Każde zdanie
+historii ma źródło, które można otworzyć („Skąd to wiemy?”).
 
 Projekt na Warsaw Open Data Hackathon 2026, wyzwanie „Złap oddech”: dla mieszkańców, którzy codziennie jeżdżą tą samą
 trasą i nie mają czasu szukać historii swojej okolicy. Opowiadamy o tym, jak zwyczajne miejsca się zmieniały: co tu
@@ -17,6 +18,10 @@ było, jak wyglądało i jak działało.
 
 Link z naklejki w pojeździe ma postać `…/opendatahackathon42/?vehicle=<numer boczny>&line=<linia>`.
 
+Numery pojazdów, które jadą teraz daną linią, razem z kierunkiem i następnym przystankiem, podaje backend, np. dla
+linii 22: https://backend-6s5kkpohyq-lm.a.run.app/api/vehicles/?line=22&live=1. Numer z pola `number` wpisz w
+aplikacji.
+
 Linie z historiami:
 
 | Linia  | Odcinek                               | Okolica            |
@@ -30,10 +35,12 @@ Linie z historiami:
 ## Jak to działa
 
 ```
-API m.st. Warszawy ──▶ przystanki, linie, odjazdy ──▶ trasy linii ─────────────┐
-                  └──▶ pozycje pojazdów co 10 s ─────────────────────────────────┤
-                                                                                 ▼
-otwarte źródła ──▶ fakty ze źródłem ──▶ historie ──▶ weryfikacja ──▶ lektor ──▶ backend ──▶ aplikacja
+API m.st. Warszawy ──▶ przystanki, linie, odjazdy ──▶ trasy linii ──────┐
+                  └──▶ pozycje pojazdów co 10 s ────────────────────────┤
+                                                                        ▼
+otwarte źródła ──▶ fakty ze źródłem ──▶ historie ──▶ weryfikacja ──▶ backend ──▶ aplikacja ◀─────────┐
+                                                          │                                          │
+                                                          └──▶ nagrania, zdjęcia ──▶ Cloud Storage ──┘
 ```
 
 1. **Trasy.** Z API m.st. Warszawy pobieramy przystanki, linie na przystankach i odjazdy. Kolejność przystanków
@@ -46,13 +53,17 @@ otwarte źródła ──▶ fakty ze źródłem ──▶ historie ──▶ wer
 4. **Historie.** Agent oparty na modelu językowym pisze historie wyłącznie z zebranych faktów, a weryfikator sprawdza
    każde zdanie. Historie powstają przed uruchomieniem aplikacji; aplikacja nie wywołuje modeli językowych.
    Szczegóły: [docs/AI_USAGE.md](docs/AI_USAGE.md).
-5. **Aplikacja.** Strona statyczna. Z backendem łączy się przez WebSocket i dostaje aktualną trasę oraz historie.
+5. **Słuchowiska.** Historię czytają syntetyczne głosy ElevenLabs; muzyka i efekty dźwiękowe też są generowane przez
+   AI. Nagrania i zdjęcia leżą w publicznym buckecie Google Cloud Storage.
+6. **Aplikacja.** Strona statyczna. Z backendem łączy się przez WebSocket i dostaje aktualną trasę, historię
+   następnego przystanku i adres jej nagrania.
 
 | Część          | Technologia                                         | Gdzie działa                                |
 | -------------- | --------------------------------------------------- | ------------------------------------------- |
 | Aplikacja      | React, Vite, Tailwind                               | GitHub Pages                                |
 | Backend        | Django, Django REST Framework, Channels (WebSocket) | Google Cloud Run                            |
 | Baza danych    | PostgreSQL 16                                       | Google Cloud SQL                            |
+| Zdjęcia, audio | pliki statyczne                                     | Google Cloud Storage (publiczny bucket)     |
 | Infrastruktura | Terraform, GitHub Actions                           | wdrożenie po każdej zmianie w `development` |
 
 Serwery API m.st. Warszawy odpowiadają tylko na zapytania z polskich adresów IP, dlatego backend działa w regionie
@@ -81,7 +92,9 @@ python3 -m venv .venv
 .venv/bin/python manage.py runserver
 ```
 
-`build_routes` powtórz dla linii 18, 179, 169 i 117.
+`build_routes` powtórz dla linii 18, 179, 169 i 117. Numery pojazdów jadących teraz linią 22 wypisze, w osobnym
+terminalu, `.venv/bin/python manage.py live_vehicles --line 22`. API m.st. Warszawy odpowiada tylko z polskiego adresu
+IP.
 
 Aplikacja, w drugim terminalu:
 
@@ -91,7 +104,7 @@ npm ci
 VITE_API_URL=http://localhost:8000 npm run dev
 ```
 
-Otwórz adres, który poda Vite, i wpisz numer boczny pojazdu jadącego teraz jedną z linii z historiami.
+Otwórz adres, który poda Vite, i wpisz jeden z tych numerów.
 
 ## Dane m.st. Warszawy
 
