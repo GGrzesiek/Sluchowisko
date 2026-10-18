@@ -121,15 +121,14 @@ Drugie polecenie wypisuje numery pojazdów, które jadą teraz linią 4.
 
 ## Dane m.st. Warszawy
 
-API: `https://dane.um.warszawa.pl/api/action/<akcja>` oraz usługi mapowe Biura Geodezji i Katastru.
+API: `https://dane.um.warszawa.pl/api/action/<akcja>`.
 
-| Zbiór                            | Akcja lub warstwa                                                                          | Do czego służy                                            |
-| -------------------------------- | ------------------------------------------------------------------------------------------ | --------------------------------------------------------- |
-| Lokalizacja pojazdów             | `get_ztm_lokalizacja_pojazdow`                                                             | pozycja pojazdu na żywo                                   |
-| Przystanki komunikacji miejskiej | `get_ztm_przystanki_komunikacji_miejskiej`                                                 | nazwy i współrzędne przystanków                           |
-| Linie na przystanku              | `get_ztm_lista_linii_na_przystanku`                                                        | które linie zatrzymują się na przystanku                  |
-| Odjazdy linii z przystanku       | `get_ztm_odjazdy_linii_z_przystanku`                                                       | kolejność przystanków na trasie                           |
-| Plany i fotoplany (WMS)          | `RASTER_FOTOPLAN_1935`, `RASTER_PLAN_1939`, `RASTER_ORTOFOTO_1945`, `RASTER_FOTOPLAN_2021` | zdjęcia w historii: okolica przystanku w czterech epokach |
+| Zbiór                            | Akcja lub warstwa                          | Do czego służy                           |
+| -------------------------------- | ------------------------------------------ | ---------------------------------------- |
+| Lokalizacja pojazdów             | `get_ztm_lokalizacja_pojazdow`             | pozycja pojazdu na żywo                  |
+| Przystanki komunikacji miejskiej | `get_ztm_przystanki_komunikacji_miejskiej` | nazwy i współrzędne przystanków          |
+| Linie na przystanku              | `get_ztm_lista_linii_na_przystanku`        | które linie zatrzymują się na przystanku |
+| Odjazdy linii z przystanku       | `get_ztm_odjazdy_linii_z_przystanku`       | kolejność przystanków na trasie          |
 
 ## Pozostałe źródła i licencje
 

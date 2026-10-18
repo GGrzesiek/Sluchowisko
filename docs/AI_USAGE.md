@@ -31,7 +31,7 @@ przystanku:
    nazw.
 5. Dobiera od jednego do pięciu zdjęć z Wikimedia Commons z okolicy przystanku, z podpisem, autorem i licencją
    przepisanymi z Commons, bez generowania obrazów. Gdy żadne zdjęcie nie pasuje, historia dostaje starą mapę
-   Warszawy z serwisu map m.st. Warszawy (1945, 1935, 1939, 2021).
+   okolicy przystanku.
 6. Przed oddaniem sprawdza oba teksty zdanie po zdaniu: czy każde ma źródło, czy nie wyciąga wniosków z samej
    zbieżności faktów i czy nie cytuje tekstów spoza domeny publicznej.
 7. Człowiek przegląda historię i jej źródła, zanim trafi do aplikacji.
