@@ -12,6 +12,8 @@ from transit.models import Line, Route, RouteStop, Stop
 from transit.services import ingest_readings
 from transit.warsaw_api import VehicleReading, WarsawApiError
 
+from . import ride_progress
+
 STOPS = [("6001", "Alfa", 52.2480), ("6002", "Beta", 52.2460), ("6003", "Gamma", 52.2440)]
 
 
@@ -92,6 +94,20 @@ class LiveVehiclesTest(TestCase):
         self.assertFalse(data["refreshed"])
         self.assertEqual(data["cityApiError"], "down")
         self.assertEqual(len(data["vehicles"]), 2)
+
+    @override_settings(CITY_API_LIVE=True)
+    @patch("transit.services.fetch_vehicle_positions", side_effect=WarsawApiError("down"))
+    def test_city_feed_down_with_no_vehicles_says_so(self, fetch):
+        build_line("179", Line.BUS, [("TP-GAM", "Gamma", "01", STOPS)])
+        data = self.live("line=179&live=1")
+        self.assertEqual(data["vehicles"], [])
+        self.assertIn("could not be reached", data["detail"])
+
+    def test_routes_are_loaded_once_per_line(self):
+        with patch("facts.ride_progress._route_points", wraps=ride_progress._route_points) as points:
+            data = self.live("line=22&live=1")
+        self.assertEqual(len(data["vehicles"]), 2)
+        self.assertEqual(points.call_count, 2)
 
 
 @override_settings(CITY_API_LIVE=False, APP_URL="http://localhost:5173")
