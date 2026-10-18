@@ -3,7 +3,7 @@
 Aplikacja, która w trakcie jazdy autobusem lub tramwajem po Warszawie opowiada historie mijanych miejsc w formie
 krótkich słuchowisk. Pasażer podaje numer boczny pojazdu albo skanuje kod QR z naklejki, a aplikacja pokazuje trasę,
 najbliższe przystanki i historię miejsca, które właśnie mija: nagranie, tekst do przeczytania i zdjęcia. Każde zdanie
-historii ma źródło, które można otworzyć („Skąd to wiemy?”).
+historii ma źródło, które można otworzyć z listy „Źródła”.
 
 Projekt na Warsaw Open Data Hackathon 2026, wyzwanie „Złap oddech”: dla mieszkańców, którzy codziennie jeżdżą tą samą
 trasą i nie mają czasu szukać historii swojej okolicy. Opowiadamy o tym, jak zwyczajne miejsca się zmieniały: co tu
@@ -19,18 +19,12 @@ było, jak wyglądało i jak działało.
 Link z naklejki w pojeździe ma postać `…/opendatahackathon42/?vehicle=<numer boczny>&line=<linia>`.
 
 Numery pojazdów, które jadą teraz daną linią, razem z kierunkiem i następnym przystankiem, podaje backend, np. dla
-linii 22: https://backend-6s5kkpohyq-lm.a.run.app/api/vehicles/?line=22&live=1. Numer z pola `number` wpisz w
+linii 4: https://backend-6s5kkpohyq-lm.a.run.app/api/vehicles/?line=4&live=1. Numer z pola `number` wpisz w
 aplikacji.
 
-Linie z historiami:
-
-| Linia  | Odcinek                               | Okolica            |
-| ------ | ------------------------------------- | ------------------ |
-| 🚋 22  | Powązkowska ↔ Pl. Starynkiewicza     | Wola               |
-| 🚋 18  | Królikarnia ↔ Wynalazek              | Mokotów, Służewiec |
-| 🚌 179 | Metro Natolin ↔ Miklaszewskiego      | Ursynów            |
-| 🚌 169 | Dw. Wschodni (Kijowska) ↔ Rondo Żaba | Praga-Północ       |
-| 🚌 117 | Rondo Waszyngtona ↔ Os. Jantar       | Saska Kępa, Gocław |
+Historie mamy na razie dla kilku przystanków tramwaju 4 oraz dla testowych linii 161 i N50. Historie są przypisane do
+zespołów przystankowych, a nie do linii, więc pokrycie zależy od przystanków. Które przystanki linii mają opublikowaną
+historię, pokazuje pole `storyStatus` w `/api/lines/<linia>/stories/`, a listę wszystkich historii `/api/stories/`.
 
 ## Założenia
 
@@ -40,7 +34,7 @@ Linie z historiami:
   Powstanie są jedną z warstw, nie osią aplikacji.
 - **Jedna historia na zespół przystankowy.** To samo nagranie gra niezależnie od linii i kierunku jazdy.
 - **Bez AI w działającej aplikacji.** Historie, nagrania i zdjęcia są przygotowane wcześniej. Aplikacja nie wywołuje
-  modeli językowych, a głos lektora jest oznaczony jako AI.
+  modeli językowych, a głos lektora jest syntetyczny.
 - **Dane miasta tylko przez backend.** Aplikacja łączy się wyłącznie z naszym backendem; API m.st. Warszawy wywołuje
   backend.
 
@@ -50,25 +44,26 @@ Linie z historiami:
 API m.st. Warszawy ──▶ przystanki, linie, odjazdy ──▶ trasy linii ──────┐
                   └──▶ pozycje pojazdów co 10 s ────────────────────────┤
                                                                         ▼
-otwarte źródła ──▶ fakty ze źródłem ──▶ historie ──▶ weryfikacja ──▶ backend ──▶ aplikacja ◀─────────┐
+otwarte źródła ──▶ fakty ze źródłem ──▶ historie ──▶ przegląd człowieka ──▶ backend ──▶ aplikacja ◀─────────┐
                                                           │                                          │
                                                           └──▶ nagrania, zdjęcia ──▶ Cloud Storage ──┘
 ```
 
 1. **Trasy.** Z API m.st. Warszawy pobieramy przystanki, linie na przystankach i odjazdy. Kolejność przystanków
    każdej linii odtwarzamy z rozkładu jednego kursu.
-2. **Pozycja pojazdu.** Backend co 10 s zna położenie pojazdów z API m.st. Warszawy. Dopasowuje pojazd do kierunku
-   jazdy, przesuwa go wzdłuż trasy o drogę przejechaną od ostatniego odczytu i wylicza minione, bieżący i następne
-   przystanki z czasem dojazdu.
-3. **Fakty.** Agent historii wyszukuje fakty o każdym zespole przystankowym w otwartych źródłach i zapisuje je w
-   rejestrze faktów ze źródłem i stopniem pewności. Fakt z jednego słabego źródła nie trafia do historii.
-4. **Historie.** Agent oparty na modelu językowym pisze historie wyłącznie z zebranych faktów, a weryfikator sprawdza
-   każde zdanie. Historie powstają przed uruchomieniem aplikacji; aplikacja nie wywołuje modeli językowych.
-   Szczegóły: [docs/AI_USAGE.md](docs/AI_USAGE.md).
+2. **Pozycja pojazdu.** Backend co 10 s zna położenie pojazdów z API m.st. Warszawy. Wybiera trasę zgodną z kierunkiem
+   jazdy, rzutuje na nią położenie pojazdu i wylicza minione, bieżący i następne przystanki z czasem dojazdu.
+3. **Fakty.** Agent historii (`stop-story-writer`) wyszukuje fakty o zespole przystankowym w otwartych źródłach i
+   w trakcie pracy prowadzi rejestr faktów ze źródłem i stopniem pewności. Fakt z jednego słabego źródła nie trafia
+   do historii. Rejestr nie jest zapisywany w bazie, do backendu trafia gotowa historia ze źródłami.
+4. **Historie.** Ten sam agent, oparty na modelu językowym, pisze historię wyłącznie z zebranych faktów i sam
+   sprawdza każde zdanie przed oddaniem. Człowiek przegląda historię i dopiero wtedy zmienia jej status na
+   `verified`; aplikacja dostaje tylko takie historie. Historie powstają przed uruchomieniem aplikacji; aplikacja
+   nie wywołuje modeli językowych. Szczegóły: [docs/AI_USAGE.md](docs/AI_USAGE.md).
 5. **Słuchowiska.** Historię czytają syntetyczne głosy ElevenLabs; muzyka i efekty dźwiękowe też są generowane przez
    AI. Nagrania i zdjęcia leżą w buckecie Google Cloud Storage.
 6. **Aplikacja.** Strona statyczna. Z backendem łączy się przez WebSocket i dostaje aktualną trasę, historię
-   następnego przystanku i adres jej nagrania.
+   przystanku, przy którym jest pojazd, i adres nagrania przystanku, który jest następny.
 
 | Część          | Technologia                                         | Gdzie działa                                |
 | -------------- | --------------------------------------------------- | ------------------------------------------- |
@@ -83,11 +78,10 @@ Google Cloud `europe-central2` (Warszawa) i sam pobiera pozycje pojazdów.
 
 ## Wdrożenie
 
-Pasażer nie instaluje aplikacji: wystarczy naklejka z kodem QR w pojeździe, która otwiera stronę z numerem taborowym i
-linią w adresie. Kolejną linię dodaje się, budując jej trasy z rozkładu (`build_routes`) i przygotowując historie dla
-zespołów przystankowych, których jeszcze nie opisaliśmy; historie z przystanków wspólnych z innymi liniami działają od
-razu. Aplikacja jest stroną statyczną, a backend na Cloud Run uruchamia się na żądanie, więc koszt utrzymania rośnie
-dopiero z liczbą pasażerów.
+Pasażer nie instaluje aplikacji: wystarczy kod QR, który otwiera stronę z numerem taborowym i linią w adresie, albo
+wpisanie numeru pojazdu. Kolejną linię dodaje się, budując jej trasy z rozkładu (`build_routes`) i przygotowując historie dla
+zespołów przystankowych, których jeszcze nie opisaliśmy, bo nie wszystkie przystanki linii mają już historię; historie z przystanków wspólnych z innymi liniami działają od
+razu. Aplikacja jest stroną statyczną, a backend działa na Cloud Run.
 
 ## Uruchomienie u siebie
 
@@ -114,16 +108,16 @@ make setup
 make backend
 ```
 
-`make setup` instaluje zależności, pobiera z API m.st. Warszawy przystanki i linie (kilka minut) i buduje trasy pięciu
-linii z historiami. Lokalna baza nie ma historii, więc aplikacja pokaże trasę i przystanki bez nagrań. W drugim
+`make setup` instaluje zależności, pobiera z API m.st. Warszawy przystanki i linie (kilka minut) i buduje trasy linii wymienionych
+w `DEMO_LINES` w `Makefile`. Lokalna baza nie ma historii, więc aplikacja pokaże trasę i przystanki bez nagrań. W drugim
 terminalu:
 
 ```bash
 make web API_URL=http://localhost:8000
-.venv/bin/python manage.py live_vehicles --line 22
+.venv/bin/python manage.py live_vehicles --line 4
 ```
 
-Drugie polecenie wypisuje numery pojazdów, które jadą teraz linią 22.
+Drugie polecenie wypisuje numery pojazdów, które jadą teraz linią 4.
 
 ## Dane m.st. Warszawy
 
@@ -154,7 +148,7 @@ Zasady, których się trzymamy:
 - Artykułów prasowych i blogów nie kopiujemy; pokazujemy link.
 - Tekstów piosenek nie cytujemy; podajemy tylko tytuł, wykonawcę i link.
 - Nazwisk ofiar nie wyciągamy automatycznie.
-- Głos lektora jest syntetyczny i w aplikacji oznaczony jako głos AI.
+- Głos lektora jest syntetyczny (ElevenLabs); opisujemy to w [docs/AI_USAGE.md](docs/AI_USAGE.md).
 
 ## Zespół
 
