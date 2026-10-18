@@ -161,3 +161,5 @@ Zasady, których się trzymamy:
 | Wojtek   | Frontend, Design, Backend             | [@xwojtuss](https://github.com/xwojtuss)       |
 
 Zasady pracy w repozytorium, CI i wdrażanie: [docs/workflow.md](docs/workflow.md).
+
+Prezentację projektu przygotowaliśmy z pomocą AI. Pełny opis wykorzystania AI: [docs/AI_USAGE.md](docs/AI_USAGE.md).
