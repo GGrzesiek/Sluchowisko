@@ -134,7 +134,23 @@ describe("live ride", () => {
     expect(HTMLMediaElement.prototype.play).toHaveBeenCalledTimes(1);
     expect(await screen.findByRole("button", { name: "Pauza" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Zakończ przejazd" }));
+    await act(() => vi.advanceTimersByTimeAsync(0));
     expect(HTMLMediaElement.prototype.pause).toHaveBeenCalled();
+  });
+
+  it("silences the story and clears the lock screen when the journey is left with browser back", async () => {
+    openRide();
+    await answer("route", ride("Okopowa"));
+    fireEvent.click(await screen.findByRole("button", { name: "Zaczynamy" }));
+    await screen.findByRole("button", { name: "Pauza" });
+    const player = document.querySelector("audio") as HTMLAudioElement;
+    expect(player.getAttribute("src")).not.toBeNull();
+
+    act(() => window.history.back());
+    await act(() => vi.advanceTimersByTimeAsync(50));
+
+    expect(screen.queryByRole("button", { name: "Zakończ przejazd" })).not.toBeInTheDocument();
+    expect(player.hasAttribute("src")).toBe(false);
   });
 
   it("keeps the loading screen up for a moment when the answer comes at once", async () => {

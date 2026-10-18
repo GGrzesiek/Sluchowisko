@@ -71,6 +71,7 @@ export function NarrationProvider({ children }: { children: ReactNode }) {
         element.removeAttribute("src");
         element.load();
         current.current = undefined;
+        clearLockScreen();
         setState(IDLE);
       },
     };
@@ -95,6 +96,13 @@ export function NarrationProvider({ children }: { children: ReactNode }) {
       />
     </NarrationContext.Provider>
   );
+}
+
+function clearLockScreen() {
+  if (!("mediaSession" in navigator)) return;
+  navigator.mediaSession.metadata = null;
+  navigator.mediaSession.setActionHandler("play", null);
+  navigator.mediaSession.setActionHandler("pause", null);
 }
 
 function showOnLockScreen(title: string, play: () => void, pause: () => void) {

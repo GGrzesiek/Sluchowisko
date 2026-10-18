@@ -99,10 +99,13 @@ export function LiveVehicleFound({ info, onStart }: { info: RideInfo; onStart: (
 
 export function LiveJourney({ info, onClose }: { info: RideInfo; onClose: () => void }) {
   const { info: live, story } = useLiveRide(info);
-  const narration = useNarration();
-  const close = () => {
-    narration.stop();
-    onClose();
-  };
-  return <JourneyScreen ride={live} story={story ?? PLACEHOLDER_STORY} onClose={close} />;
+  const { stop } = useNarration();
+  const pendingStop = useRef<number>(undefined);
+  useEffect(() => {
+    clearTimeout(pendingStop.current);
+    return () => {
+      pendingStop.current = window.setTimeout(stop, 0);
+    };
+  }, [stop]);
+  return <JourneyScreen ride={live} story={story ?? PLACEHOLDER_STORY} onClose={onClose} />;
 }
