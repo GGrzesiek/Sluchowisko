@@ -63,7 +63,7 @@ open sources ─▶ facts with sources ─▶ stories ─▶ verifier ─▶ voi
 | Grzesiek | @GGrzesiek   | DevOps, CI, keys (#5); recording rides (#7)                                                        |
 | Hubert   | @hububiq     | City endpoints: stops, vehicle positions, prices (#32, #6, #10); ride simulation, serving (#14–15) |
 | Kuba     | @Jzackiewicz | Pitch; stories agent: sources, stories, verifier, voice-over (#8, #11–13)                          |
-| Masza    | @MaryTim     | UI (#16, #22); facts collector (#9)                                                                |
+| Masza    | @MaryTim     | UI (#16, #22)                                                                                      |
 | Wojtek   | @xwojtuss    | UI (#16, #20)                                                                                      |
 
 Stay inside the area of your issue. If you need to change someone else's area, mention them in the PR.
