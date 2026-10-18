@@ -44,4 +44,4 @@ narratora. Człowiek odsłuchuje nagranie, zanim trafi do aplikacji.
 ## Przy tworzeniu oprogramowania
 
 Zespół korzystał z asystentów AI (m.in. Claude Code) przy przeglądzie źródeł i API miasta, pisaniu kodu, konfiguracji
-infrastruktury w Google Cloud (Terraform, GitHub Actions), dokumentacji i opisów zadań. Każda zmiana przechodzi przez pull request i automatyczne testy.
+infrastruktury w Google Cloud (Terraform, GitHub Actions), dokumentacji i opisów zadań. Prezentację przygotowaliśmy z pomocą AI. Każda zmiana przechodzi przez pull request i automatyczne testy.
