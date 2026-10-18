@@ -1,6 +1,6 @@
 import { Button, LineBadge, LineChip } from "../components";
 
-const DEMO_LINES = ["22", "18", "179", "169", "117"];
+const LINES_WITH_STORIES = ["4", "161", "N50"];
 
 interface RideDeadEndScreenProps {
   problem: "vehicleNotFound" | "noRoute";
@@ -40,9 +40,9 @@ export function RideDeadEndScreen({ problem, vehicle, line, onEnterAnother, onSt
               aria-label="Linie z historiami"
               className="m-0 flex list-none flex-wrap justify-center gap-2 p-0 text-2xl"
             >
-              {DEMO_LINES.map((demoLine) => (
-                <li key={demoLine}>
-                  <LineChip line={demoLine} tone="bus" />
+              {LINES_WITH_STORIES.map((storyLine) => (
+                <li key={storyLine}>
+                  <LineChip line={storyLine} tone="bus" />
                 </li>
               ))}
             </ul>

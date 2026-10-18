@@ -114,7 +114,7 @@ No recording for that stop group (or its story is not verified yet):
 
 ## Ride replay (`ride.json`)
 
-`web/public/rides/<line>.json`, one recorded ride per demo line, built from a positions recording by
+`web/public/rides/<line>.json`, one recorded ride per line, built from a positions recording by
 `make simulate REC=data/raw/<line>/positions-....jsonl`. The app replays it in demo mode instead of live positions.
 
 ```json

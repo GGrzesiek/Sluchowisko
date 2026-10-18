@@ -106,7 +106,7 @@ describe("live ride", () => {
     await answer("error", { code: "no_route", line: "999" });
     expect(await screen.findByRole("heading", { name: "Nie mamy jeszcze historii dla tej linii" })).toBeInTheDocument();
     expect(screen.getByRole("img", { name: "Linia 999" })).toBeInTheDocument();
-    expect(screen.getByRole("list", { name: "Linie z historiami" })).toHaveTextContent("2218179169117");
+    expect(screen.getByRole("list", { name: "Linie z historiami" })).toHaveTextContent("4161N50");
   });
 
   it("keeps waiting while there is no live data, then moves on", async () => {
