@@ -8,17 +8,41 @@ from transit.models import Stop, Vehicle
 from transit.services import refresh_vehicle
 from transit.warsaw_api import WarsawApiError
 
+from .live_vehicles import live_vehicles
 from .serializers import StopSerializer, VehicleSerializer
 from .services import is_stale
+
+DEBUG_LINES = {
+    "day": ("161", "Line 161 runs about 04:48-23:18. At night use /api/debug/night/."),
+    "night": ("N50", "Line N50 runs at night. During the day use /api/debug/day/."),
+}
+
+
+def _live_response(request, line, hint=None):
+    result = live_vehicles(line, request.query_params.get("route") or None, refresh=settings.CITY_API_LIVE)
+    if hint and "detail" in result:
+        result["detail"] = f"{result['detail']} {hint}"
+    return Response(result)
 
 
 @api_view(["GET"])
 def vehicles(request):
     """Live vehicles, optionally filtered by ?line=17. Useful for a map view / debugging."""
+    if request.query_params.get("live") in ("1", "true"):
+        line = request.query_params.get("line")
+        if not line:
+            return Response({"detail": "live=1 needs line, e.g. ?line=22&live=1"}, status=status.HTTP_400_BAD_REQUEST)
+        return _live_response(request, line)
     qs = Vehicle.objects.all()
     if line := request.query_params.get("line"):
         qs = qs.filter(line=line)
     return Response(VehicleSerializer(qs, many=True).data)
+
+
+@api_view(["GET"])
+def debug_vehicles(request, period):
+    line, hint = DEBUG_LINES[period]
+    return _live_response(request, line, hint)
 
 
 @api_view(["GET"])

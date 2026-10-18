@@ -124,6 +124,10 @@ def _group_runs(stops) -> list[tuple[int, int]]:
 
 
 def build_ride_info(v: Vehicle) -> dict:
+    return ride_state(v)[1]
+
+
+def ride_state(v: Vehicle):
     route, stops, pts, seg, t = pick_route(v, v.lat, v.lon)
 
     # cumulative distance of each stop along the route, and of the vehicle
@@ -155,4 +159,9 @@ def build_ride_info(v: Vehicle) -> dict:
             item["hasStory"] = True
         out.append(item)
 
-    return {"vehicle": v.number, "line": v.line, "destination": route.last_stop_name or stops[-1].name, "stops": out}
+    return route, {
+        "vehicle": v.number,
+        "line": v.line,
+        "destination": route.last_stop_name or stops[-1].name,
+        "stops": out,
+    }
