@@ -56,7 +56,10 @@ python3 -c "import secrets; print(secrets.token_urlsafe(32), end='')" | gcloud s
 
 The owner passes the stories token to whoever runs the stories agent privately, never through the repo or chat logs.
 
-Database migrations are run by hand from a laptop (see Connecting), not by the deploy.
+Each deploy runs `python manage.py migrate` in the new image, through the Cloud SQL proxy as `tf-apply` (role `team`),
+before the new revision gets any traffic. Migrations must therefore also work with the previous revision still
+serving for a minute: add columns and tables first, drop old ones in a later deploy. A failed migration stops the deploy
+and the previous revision keeps serving.
 
 The city servers (`dane.um.warszawa.pl`, `api.um.warszawa.pl`, `wms.um.warszawa.pl`) answer only from Polish IP
 addresses: from Cloud Shell (Netherlands) and GitHub Actions (USA) they time out, from Cloud Run in `europe-central2`

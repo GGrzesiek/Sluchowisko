@@ -12,6 +12,7 @@ on:
       - "requirements.txt"
       - "Dockerfile"
       - ".dockerignore"
+      - ".github/workflows/backend.yml"
   workflow_dispatch:
 
 permissions:
@@ -26,6 +27,8 @@ env:
   WORKLOAD_IDENTITY_PROVIDER: projects/314520931870/locations/global/workloadIdentityPools/github/providers/github
   REGION: europe-central2
   IMAGE: europe-central2-docker.pkg.dev/muzeum-w-autobusie-2026/backend/backend
+  CLOUDSQL_INSTANCE: muzeum-w-autobusie-2026:europe-central2:muzeum
+  CLOUD_SQL_PROXY_VERSION: v2.26.0
 
 jobs:
   deploy:
@@ -42,6 +45,21 @@ jobs:
       - run: |
           docker build -t "${IMAGE}:${GITHUB_SHA}" .
           docker push "${IMAGE}:${GITHUB_SHA}"
+      - name: Migrate the database
+        run: |
+          set -o pipefail
+          curl -sSfLo cloud-sql-proxy "https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/${CLOUD_SQL_PROXY_VERSION}/cloud-sql-proxy.linux.amd64"
+          chmod +x cloud-sql-proxy
+          ./cloud-sql-proxy --auto-iam-authn "$CLOUDSQL_INSTANCE" &
+          for _ in $(seq 30); do pg_isready -h 127.0.0.1 -q && break; sleep 1; done
+          {
+            echo '### Database migrations'
+            echo '```'
+            docker run --rm --network host -e DEBUG=0 -e SECRET_KEY=migrate \
+              -e DATABASE_URL="postgres://tf-apply%40muzeum-w-autobusie-2026.iam@127.0.0.1:5432/muzeum" \
+              "${IMAGE}:${GITHUB_SHA}" python manage.py migrate --noinput
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Deploy without traffic
         run: |
           gcloud run services update backend --region "$REGION" --no-traffic --tag candidate \
