@@ -162,8 +162,8 @@ Zasady, których się trzymamy:
 | -------- | ------------------------------------- | ---------------------------------------------- |
 | Grzesiek | DevOps, infrastruktura, nagrania tras | [@GGrzesiek](https://github.com/GGrzesiek)     |
 | Hubert   | Backend, dane o komunikacji           | [@hububiq](https://github.com/hububiq)         |
-| Kuba     | Pitch, agent historii                 | [@Jzackiewicz](https://github.com/Jzackiewicz) |
-| Masza    | Frontend, zbieranie faktów            | [@MaryTim](https://github.com/MaryTim)         |
-| Wojtek   | Frontend                              | [@xwojtuss](https://github.com/xwojtuss)       |
+| Kuba     | Pitch, AI                             | [@Jzackiewicz](https://github.com/Jzackiewicz) |
+| Masza    | Frontend, Design, AI                  | [@MaryTim](https://github.com/MaryTim)         |
+| Wojtek   | Frontend, Design, Backend             | [@xwojtuss](https://github.com/xwojtuss)       |
 
 Zasady pracy w repozytorium, CI i wdrażanie: [docs/workflow.md](docs/workflow.md).
