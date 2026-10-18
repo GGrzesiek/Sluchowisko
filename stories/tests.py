@@ -355,59 +355,81 @@ class PublishPhotosTest(TestCase):
     def setUp(self):
         Stop.objects.create(zespol="7001", slupek="01", name="Alfa", lat=52.20, lon=21.0)
         self.agent = APIClient(HTTP_AUTHORIZATION=f"Bearer {TOKEN}")
-        self.out = Path(tempfile.mkdtemp()) / "out"
-        (self.out / "collected").mkdir(parents=True)
-        (self.out / "images" / "7001").mkdir(parents=True)
-        (self.out / "images" / "7001" / "i7.jpg").write_bytes(b"\xff\xd8\xff photo")
-        collected = {"images": [{"id": "i7", "url": COMMONS, "file": "out/images/7001/i7.jpg"}]}
-        (self.out / "collected" / "7001.json").write_text(json.dumps(collected))
 
-    def publish(self, *args):
+    def response(self, content_type="image/jpeg", body=b"\xff\xd8\xff photo"):
+        response = MagicMock()
+        response.headers.get_content_type.return_value = content_type
+        response.read.return_value = body
+        response.__enter__.return_value = response
+        return response
+
+    def publish(self, *args, response=None):
         stdout = io.StringIO()
         with (
+            patch("stories.management.commands.publish_photos.urllib.request.urlopen") as urlopen,
             patch("stories.media.shutil.which", return_value="/usr/bin/gcloud"),
             patch("stories.media.subprocess.run", return_value=MagicMock(returncode=0)) as run,
         ):
-            call_command("publish_photos", "--out", str(self.out), *args, stdout=stdout)
-        return run, stdout.getvalue()
+            if isinstance(response, Exception):
+                urlopen.side_effect = response
+            else:
+                urlopen.return_value = response or self.response()
+            call_command("publish_photos", *args, stdout=stdout)
+        return urlopen, run, stdout.getvalue()
 
-    def test_uploads_collector_file_and_points_src_at_media(self):
+    def test_downloads_src_and_points_it_at_media(self):
         Story.objects.create(group_id="7001", title="Alfa", narration="n", text="t", photos=[external_photo()])
-        run, _ = self.publish()
+        urlopen, run, _ = self.publish()
+        self.assertEqual(urlopen.call_args.args[0].full_url, f"{COMMONS}?raw")
+        self.assertIn("User-agent", urlopen.call_args.args[0].headers)
         cmd = run.call_args.args[0]
         self.assertEqual(cmd[1:3], ["storage", "cp"])
-        self.assertEqual(Path(cmd[3]), self.out / "images" / "7001" / "i7.jpg")
-        self.assertEqual(cmd[4], f"gs://{MEDIA_BUCKET}/photos/7001/i7.jpg")
+        self.assertRegex(cmd[4], rf"^gs://{MEDIA_BUCKET}/photos/7001/[0-9a-f]{{16}}\.jpg$")
         photo = Story.objects.get().photos[0]
-        self.assertEqual(photo["src"], f"{MEDIA}/photos/7001/i7.jpg")
+        self.assertEqual(photo["src"], f"{MEDIA}/{cmd[4].split('/', 3)[3]}")
         self.assertEqual(photo["source_url"], COMMONS)
         self.assertEqual(photo["license"], "domena publiczna")
 
+    def test_city_map_keeps_its_extension(self):
+        wms = (
+            "https://wms.um.warszawa.pl/serwis?SERVICE=WMS&REQUEST=GetMap&LAYERS=RASTER_FOTOPLAN_1935&FORMAT=image/png"
+        )
+        Story.objects.create(group_id="7001", title="Alfa", narration="n", text="t", photos=[external_photo(src=wms)])
+        _, run, _ = self.publish(response=self.response("image/png"))
+        self.assertTrue(run.call_args.args[0][4].endswith(".png"))
+
     def test_skips_published_photos(self):
         Story.objects.create(group_id="7001", title="Alfa", narration="n", text="t", photos=story_payload()["photos"])
-        run, _ = self.publish()
+        urlopen, run, _ = self.publish()
+        urlopen.assert_not_called()
         run.assert_not_called()
 
-    def test_reports_photo_without_collector_file(self):
-        other = external_photo(source_url="https://commons.wikimedia.org/wiki/File:Inny.jpg")
-        Story.objects.create(group_id="7001", title="Alfa", narration="n", text="t", photos=[other])
-        run, output = self.publish()
+    def test_reports_src_that_is_not_an_image(self):
+        Story.objects.create(group_id="7001", title="Alfa", narration="n", text="t", photos=[external_photo()])
+        _, run, output = self.publish(response=self.response("text/html"))
         run.assert_not_called()
-        self.assertIn("File:Inny.jpg", output)
-        self.assertEqual(Story.objects.get().photos[0]["src"], other["src"])
+        self.assertIn("text/html", output)
+        self.assertEqual(Story.objects.get().photos[0]["src"], f"{COMMONS}?raw")
+
+    def test_reports_src_that_cannot_be_downloaded(self):
+        Story.objects.create(group_id="7001", title="Alfa", narration="n", text="t", photos=[external_photo()])
+        _, run, output = self.publish(response=OSError("timed out"))
+        run.assert_not_called()
+        self.assertIn("timed out", output)
 
     def test_dry_run_uploads_nothing(self):
         Story.objects.create(group_id="7001", title="Alfa", narration="n", text="t", photos=[external_photo()])
-        run, output = self.publish("--dry-run")
+        urlopen, run, output = self.publish("--dry-run")
+        urlopen.assert_not_called()
         run.assert_not_called()
-        self.assertIn("photos/7001/i7.jpg", output)
+        self.assertIn(f"{COMMONS}?raw", output)
         self.assertEqual(Story.objects.get().photos[0]["src"], f"{COMMONS}?raw")
 
     def test_rejected_stories_are_left_alone(self):
         Story.objects.create(
             group_id="7001", title="Alfa", narration="n", text="t", photos=[external_photo()], status="rejected"
         )
-        run, _ = self.publish()
+        _, run, _ = self.publish()
         run.assert_not_called()
 
     def test_verify_needs_photos_in_media_bucket(self):

@@ -29,9 +29,9 @@ przystanku:
 4. Pisze tekst narracji pod mowę, nie pod czytanie: zdania różnej długości, bez wyliczanek, liczby słownie, najwyżej
    trzy znaczniki audio (np. ton ciepły, zamyślony, pauza przed puentą) i zapisy wymowy dla skrótowców i obcych
    nazw.
-5. Dobiera od jednego do pięciu zdjęć lub map spośród plików zebranych wcześniej przez skrypt bez AI (kolektor),
-   bez generowania obrazów i bez zmiany podpisów oraz licencji. Gdy żadne zdjęcie nie pasuje, historia dostaje
-   starą mapę Warszawy z serwisu miasta (1945, 1935, 1939, 2021).
+5. Dobiera od jednego do pięciu zdjęć z Wikimedia Commons z okolicy przystanku, z podpisem, autorem i licencją
+   przepisanymi z Commons, bez generowania obrazów. Gdy żadne zdjęcie nie pasuje, historia dostaje starą mapę
+   Warszawy z serwisu map m.st. Warszawy (1945, 1935, 1939, 2021).
 6. Przed oddaniem sprawdza oba teksty zdanie po zdaniu: czy każde ma źródło, czy nie wyciąga wniosków z samej
    zbieżności faktów i czy nie cytuje tekstów spoza domeny publicznej.
 7. Człowiek przegląda historię i jej źródła, zanim trafi do aplikacji.

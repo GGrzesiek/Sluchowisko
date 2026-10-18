@@ -9,7 +9,7 @@ The app talks to the backend on Cloud Run and loads photos and recordings from t
 | Project                           | `muzeum-w-autobusie-2026`, region `europe-central2`            |
 | PostgreSQL 16 (Cloud SQL)         | instance `muzeum`, database `muzeum`, IAM login only           |
 | ElevenLabs recordings             | bucket `muzeum-w-autobusie-2026-audio`, private, versioned     |
-| Facts collector output            | bucket `muzeum-w-autobusie-2026-data`, private, versioned      |
+| Shared working files              | bucket `muzeum-w-autobusie-2026-data`, private, versioned      |
 | Photos and recordings for the app | bucket `muzeum-w-autobusie-2026-media`, public read, versioned |
 | Terraform state                   | bucket `muzeum-w-autobusie-2026-tfstate`                       |
 | Backend (Django)                  | Cloud Run service `backend`, public HTTPS                      |
@@ -132,12 +132,9 @@ gcloud storage rsync -r gs://muzeum-w-autobusie-2026-data/cache cache
   `readers` automatically; tables created under your own name are not.
 - `gcloud storage cp clip.mp3 gs://muzeum-w-autobusie-2026-audio/<path>` uploads a recording. Overwriting an object
   keeps the old version; `gcloud storage ls -a gs://...` lists them.
-- After a facts collector run, `gcloud storage rsync -r out gs://muzeum-w-autobusie-2026-data/out` and the same for
-  `cache` publish the files the stories agent reads (see `collector/README.md`).
-- `python manage.py publish_photos [--download] [--group 4001] [--dry-run]` puts the photos of every draft and verified
-  story into the media bucket. For each photo it finds the collector file whose `url` equals the photo's `source_url`
-  (`out/collected/<groupId>.json`), uploads it unmodified to `photos/<groupId>/<imageId>.jpg` and sets `src` to its
-  public URL. `--download` first fetches `out/` from the data bucket. A story can be verified only after its photos
+- `python manage.py publish_photos [--group 4001] [--dry-run]` puts the photos of every draft and verified story into
+  the media bucket. It downloads each photo's `src` (a Wikimedia Commons file or a city WMS map), uploads it unmodified
+  to `photos/<groupId>/<hash>.<ext>` and sets `src` to its public URL. A story can be verified only after its photos
   are in the media bucket.
 
 ## Adding or removing people (owner)
