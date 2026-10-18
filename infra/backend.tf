@@ -100,6 +100,11 @@ resource "google_cloud_run_v2_service" "backend" {
       }
 
       env {
+        name  = "APP_URL"
+        value = "https://ggrzesiek.dev/opendatahackathon42/dev/"
+      }
+
+      env {
         name  = "DATABASE_URL"
         value = "postgres://${urlencode(local.api_db_user)}@127.0.0.1:5432/${google_sql_database.main.name}"
       }
