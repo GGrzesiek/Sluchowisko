@@ -1,6 +1,6 @@
 MINUTES ?= 60
 PY := .venv/bin/python
-DEMO_LINES := 22 18 179 169 117
+LINES := 4 161 N50
 API_URL ?= https://backend-6s5kkpohyq-lm.a.run.app
 
 .PHONY: setup backend web record extract
@@ -12,7 +12,7 @@ setup:
 	$(PY) -m pip install -q -r requirements.txt
 	$(PY) manage.py migrate
 	$(PY) manage.py sync_city_data
-	$(PY) manage.py build_routes $(addprefix --line ,$(DEMO_LINES))
+	$(PY) manage.py build_routes $(addprefix --line ,$(LINES))
 	cd web && npm ci
 
 backend:

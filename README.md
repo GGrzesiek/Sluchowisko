@@ -108,8 +108,8 @@ make setup
 make backend
 ```
 
-`make setup` instaluje zależności, pobiera z API m.st. Warszawy przystanki i linie (kilka minut) i buduje trasy linii wymienionych
-w `DEMO_LINES` w `Makefile`. Lokalna baza nie ma historii, więc aplikacja pokaże trasę i przystanki bez nagrań. W drugim
+`make setup` instaluje zależności, pobiera z API m.st. Warszawy przystanki i linie (kilka minut) i buduje trasy linii wymienionych w
+`LINES` w `Makefile` (4, 161 i N50). Lokalna baza nie ma historii, więc aplikacja pokaże trasę i przystanki bez nagrań. W drugim
 terminalu:
 
 ```bash
