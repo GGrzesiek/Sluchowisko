@@ -63,8 +63,9 @@ class Command(BaseCommand):
                         failed.append(f"{story.group_id}: {src} ({error})")
                         photos.append(photo)
                         continue
+                    typed = path.replace(path.with_suffix(EXTENSIONS[content_type]))
                     try:
-                        url = media.upload(path, object_name(story.group_id, src, content_type))
+                        url = media.upload(typed, object_name(story.group_id, src, content_type))
                     except media.MediaError as error:
                         raise CommandError(str(error)) from error
                     photos.append({**photo, "src": url})
