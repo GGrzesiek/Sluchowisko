@@ -64,8 +64,11 @@ def _route_points(route):
     return stops, [(s.lat, s.lon) for s in stops]
 
 
-def _fit(v: Vehicle, lat: float, lon: float, route):
-    stops, pts = _route_points(route)
+def line_routes(line: str) -> list[tuple]:
+    return [(route, *_route_points(route)) for route in Route.objects.filter(line_id=line)]
+
+
+def _fit(v: Vehicle, lat: float, lon: float, route, stops, pts):
     if len(pts) < 2:
         return None
     dist, i, t = _project(lat, lon, pts)
@@ -77,8 +80,9 @@ def _route_memory_key(v: Vehicle) -> str:
     return f"ride:route:{v.number}"
 
 
-def pick_route(v: Vehicle, lat: float, lon: float):
-    fits = [f for f in (_fit(v, lat, lon, r) for r in Route.objects.filter(line_id=v.line)) if f]
+def pick_route(v: Vehicle, lat: float, lon: float, routes: list[tuple] | None = None):
+    routes = line_routes(v.line) if routes is None else routes
+    fits = [f for f in (_fit(v, lat, lon, *r) for r in routes) if f]
     fits = [f for f in fits if not f[2].is_depot] or fits
     if not fits:
         raise NoRouteError(f"No route built for line {v.line}. Run: python manage.py build_routes --line {v.line}")
@@ -127,8 +131,8 @@ def build_ride_info(v: Vehicle) -> dict:
     return ride_state(v)[1]
 
 
-def ride_state(v: Vehicle):
-    route, stops, pts, seg, t = pick_route(v, v.lat, v.lon)
+def ride_state(v: Vehicle, routes: list[tuple] | None = None):
+    route, stops, pts, seg, t = pick_route(v, v.lat, v.lon, routes)
 
     # cumulative distance of each stop along the route, and of the vehicle
     cum = [0.0]
