@@ -32,6 +32,18 @@ Linie z historiami:
 | 🚌 169 | Dw. Wschodni (Kijowska) ↔ Rondo Żaba | Praga-Północ       |
 | 🚌 117 | Rondo Waszyngtona ↔ Os. Jantar       | Saska Kępa, Gocław |
 
+## Założenia
+
+- **Każde zdanie ma źródło.** Historia powstaje tylko z faktów zebranych z otwartych źródeł, a pasażer może otworzyć
+  źródło każdego z nich.
+- **Zwyczajne miejsca, nie daty.** Opowiadamy, co było w mijanym miejscu, jak wyglądało i jak działało. Wojna i
+  Powstanie są jedną z warstw, nie osią aplikacji.
+- **Jedna historia na zespół przystankowy.** To samo nagranie gra niezależnie od linii i kierunku jazdy.
+- **Bez AI w działającej aplikacji.** Historie, nagrania i zdjęcia są przygotowane wcześniej. Aplikacja nie wywołuje
+  modeli językowych, a głos lektora jest oznaczony jako AI.
+- **Dane miasta tylko przez backend.** Aplikacja łączy się wyłącznie z naszym backendem; API m.st. Warszawy wywołuje
+  backend.
+
 ## Jak to działa
 
 ```
@@ -68,6 +80,14 @@ otwarte źródła ──▶ fakty ze źródłem ──▶ historie ──▶ wer
 
 Serwery API m.st. Warszawy odpowiadają tylko na zapytania z polskich adresów IP, dlatego backend działa w regionie
 Google Cloud `europe-central2` (Warszawa) i sam pobiera pozycje pojazdów.
+
+## Wdrożenie
+
+Pasażer nie instaluje aplikacji: wystarczy naklejka z kodem QR w pojeździe, która otwiera stronę z numerem bocznym i
+linią w adresie. Kolejną linię dodaje się, budując jej trasy z rozkładu (`build_routes`) i przygotowując historie dla
+zespołów przystankowych, których jeszcze nie opisaliśmy; historie z przystanków wspólnych z innymi liniami działają od
+razu. Aplikacja jest stroną statyczną, a backend na Cloud Run uruchamia się na żądanie, więc koszt utrzymania rośnie
+dopiero z liczbą pasażerów.
 
 ## Uruchomienie u siebie
 
