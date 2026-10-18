@@ -66,7 +66,7 @@ otwarte źródła ──▶ fakty ze źródłem ──▶ historie ──▶ wer
    każde zdanie. Historie powstają przed uruchomieniem aplikacji; aplikacja nie wywołuje modeli językowych.
    Szczegóły: [docs/AI_USAGE.md](docs/AI_USAGE.md).
 5. **Słuchowiska.** Historię czytają syntetyczne głosy ElevenLabs; muzyka i efekty dźwiękowe też są generowane przez
-   AI. Nagrania i zdjęcia leżą w publicznym buckecie Google Cloud Storage.
+   AI. Nagrania i zdjęcia leżą w buckecie Google Cloud Storage.
 6. **Aplikacja.** Strona statyczna. Z backendem łączy się przez WebSocket i dostaje aktualną trasę, historię
    następnego przystanku i adres jej nagrania.
 
@@ -83,7 +83,7 @@ Google Cloud `europe-central2` (Warszawa) i sam pobiera pozycje pojazdów.
 
 ## Wdrożenie
 
-Pasażer nie instaluje aplikacji: wystarczy naklejka z kodem QR w pojeździe, która otwiera stronę z numerem bocznym i
+Pasażer nie instaluje aplikacji: wystarczy naklejka z kodem QR w pojeździe, która otwiera stronę z numerem taborowym i
 linią w adresie. Kolejną linię dodaje się, budując jej trasy z rozkładu (`build_routes`) i przygotowując historie dla
 zespołów przystankowych, których jeszcze nie opisaliśmy; historie z przystanków wspólnych z innymi liniami działają od
 razu. Aplikacja jest stroną statyczną, a backend na Cloud Run uruchamia się na żądanie, więc koszt utrzymania rośnie
@@ -91,40 +91,39 @@ dopiero z liczbą pasażerów.
 
 ## Uruchomienie u siebie
 
-Wymagane: Python 3.12, Node.js 22, klucz do API m.st. Warszawy.
+Wymagane: Node.js 22. Do własnego backendu także Python 3.12 i klucz do API m.st. Warszawy.
 
 ```bash
 git clone https://github.com/GGrzesiek/opendatahackathon42.git
 cd opendatahackathon42
-cp .env.example .env
 ```
 
-W `.env` wpisz klucz w `ZTM_API_KEY`. Pozostaw `DATABASE_URL` pusty, żeby backend użył lokalnej bazy SQLite.
-
-Backend:
+**Sama aplikacja, z naszym backendem.** Bez klucza i bez Pythona:
 
 ```bash
-python3 -m venv .venv
-.venv/bin/pip install -r requirements.txt
-.venv/bin/python manage.py migrate
-.venv/bin/python manage.py sync_city_data
-.venv/bin/python manage.py build_routes --line 22
-.venv/bin/python manage.py runserver
+make web
 ```
 
-`build_routes` powtórz dla linii 18, 179, 169 i 117. Numery pojazdów jadących teraz linią 22 wypisze, w osobnym
-terminalu, `.venv/bin/python manage.py live_vehicles --line 22`. API m.st. Warszawy odpowiada tylko z polskiego adresu
-IP.
+Otwórz adres, który poda Vite, i wpisz numer pojazdu z listy z sekcji „Wypróbuj”.
 
-Aplikacja, w drugim terminalu:
+**Aplikacja z własnym backendem.** W `.env` (powstaje z `.env.example`) wpisz klucz w `ZTM_API_KEY`, a `DATABASE_URL`
+zostaw pusty, żeby backend użył lokalnej bazy SQLite. API m.st. Warszawy odpowiada tylko z polskiego adresu IP.
 
 ```bash
-cd web
-npm ci
-VITE_API_URL=http://localhost:8000 npm run dev
+make setup
+make backend
 ```
 
-Otwórz adres, który poda Vite, i wpisz jeden z tych numerów.
+`make setup` instaluje zależności, pobiera z API m.st. Warszawy przystanki i linie (kilka minut) i buduje trasy pięciu
+linii z historiami. Lokalna baza nie ma historii, więc aplikacja pokaże trasę i przystanki bez nagrań. W drugim
+terminalu:
+
+```bash
+make web API_URL=http://localhost:8000
+.venv/bin/python manage.py live_vehicles --line 22
+```
+
+Drugie polecenie wypisuje numery pojazdów, które jadą teraz linią 22.
 
 ## Dane m.st. Warszawy
 
