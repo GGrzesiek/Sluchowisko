@@ -101,7 +101,7 @@ resource "google_cloud_run_v2_service" "backend" {
 
       env {
         name  = "APP_URL"
-        value = "https://ggrzesiek.dev/opendatahackathon42/dev/"
+        value = "https://ggrzesiek.dev/Sluchowisko/dev/"
       }
 
       env {

@@ -28,7 +28,7 @@ describe("readRideFromUrl", () => {
 
 describe("readRideFromQrCode", () => {
   it("reads the ride from a sticker link", () => {
-    expect(readRideFromQrCode("https://ggrzesiek.dev/opendatahackathon42/?line=180&vehicle=1234")).toEqual({
+    expect(readRideFromQrCode("https://ggrzesiek.dev/Sluchowisko/?line=180&vehicle=1234")).toEqual({
       line: "180",
       vehicle: "1234",
     });

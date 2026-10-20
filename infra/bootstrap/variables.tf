@@ -5,7 +5,7 @@ variable "project_id" {
 
 variable "repository" {
   type    = string
-  default = "GGrzesiek/opendatahackathon42"
+  default = "GGrzesiek/Sluchowisko"
 }
 
 variable "repository_id" {

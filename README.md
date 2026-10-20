@@ -11,12 +11,12 @@ było, jak wyglądało i jak działało.
 
 ## Wypróbuj
 
-| Wersja      | Adres                                         |
-| ----------- | --------------------------------------------- |
-| Produkcyjna | http://ggrzesiek.dev/opendatahackathon42/     |
-| Rozwojowa   | http://ggrzesiek.dev/opendatahackathon42/dev/ |
+| Wersja      | Adres                                 |
+| ----------- | ------------------------------------- |
+| Produkcyjna | http://ggrzesiek.dev/Sluchowisko/     |
+| Rozwojowa   | http://ggrzesiek.dev/Sluchowisko/dev/ |
 
-Link z naklejki w pojeździe ma postać `…/opendatahackathon42/?vehicle=<numer boczny>&line=<linia>`.
+Link z naklejki w pojeździe ma postać `…/Sluchowisko/?vehicle=<numer boczny>&line=<linia>`.
 
 Numery pojazdów, które jadą teraz daną linią, razem z kierunkiem i następnym przystankiem, podaje backend, np. dla
 linii 4: https://backend-6s5kkpohyq-lm.a.run.app/api/vehicles/?line=4&live=1. Numer z pola `number` wpisz w
@@ -88,8 +88,8 @@ razu. Aplikacja jest stroną statyczną, a backend działa na Cloud Run.
 Wymagane: Node.js 22. Do własnego backendu także Python 3.12 i klucz do API m.st. Warszawy.
 
 ```bash
-git clone https://github.com/GGrzesiek/opendatahackathon42.git
-cd opendatahackathon42
+git clone https://github.com/GGrzesiek/Sluchowisko.git
+cd Sluchowisko
 ```
 
 **Sama aplikacja, z naszym backendem.** Bez klucza i bez Pythona:
