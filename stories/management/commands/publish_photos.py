@@ -8,7 +8,7 @@ from django.core.management.base import BaseCommand, CommandError
 from stories import media
 from stories.models import Story
 
-USER_AGENT = "Sluchowisko/1.0 (https://github.com/GGrzesiek/opendatahackathon42)"
+USER_AGENT = "Sluchowisko/1.0 (https://github.com/GGrzesiek/Sluchowisko)"
 EXTENSIONS = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp", "image/gif": ".gif"}
 
 

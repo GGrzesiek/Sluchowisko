@@ -29,7 +29,7 @@ describe("QrScannerScreen", () => {
 
   it("opens the ride from a sticker code", () => {
     const { onRideFound } = renderScreen();
-    act(() => camera.decode?.({ data: "https://ggrzesiek.dev/opendatahackathon42/?line=180&vehicle=1234" }));
+    act(() => camera.decode?.({ data: "https://ggrzesiek.dev/Sluchowisko/?line=180&vehicle=1234" }));
     expect(camera.stop).toHaveBeenCalled();
     expect(onRideFound).toHaveBeenCalledWith({ line: "180", vehicle: "1234" });
   });

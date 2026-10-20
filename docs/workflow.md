@@ -1,11 +1,11 @@
-# opendatahackathon42
+# Słuchowisko
 
 Team repository for the Open Data Hackathon project "Słuchowisko".
 
-| Environment | URL                                           | Built from    |
-| ----------- | --------------------------------------------- | ------------- |
-| Production  | http://ggrzesiek.dev/opendatahackathon42/     | `release`     |
-| Development | http://ggrzesiek.dev/opendatahackathon42/dev/ | `development` |
+| Environment | URL                                   | Built from    |
+| ----------- | ------------------------------------- | ------------- |
+| Production  | http://ggrzesiek.dev/Sluchowisko/     | `release`     |
+| Development | http://ggrzesiek.dev/Sluchowisko/dev/ | `development` |
 
 ## Branches
 
@@ -92,7 +92,7 @@ The app lives in `web/`. Use Node.js 22, like CI: on Node 20 the test runner fai
 
 - Plain HTML, CSS and JS files in `web/` are published as they are.
 - If `web/package.json` exists, CI runs `npm ci` and `npm run build` and publishes `web/dist`.
-- The build gets the site base path in the `BASE_PATH` environment variable, for example `/opendatahackathon42/dev/`. Configure your build tool to use it so links and assets work under both URLs.
+- The build gets the site base path in the `BASE_PATH` environment variable, for example `/Sluchowisko/dev/`. Configure your build tool to use it so links and assets work under both URLs.
 - Add `lint` and `test` scripts to `web/package.json` and CI will run them.
 
 ## Deployment
@@ -109,8 +109,8 @@ A branch without a `web/` directory shows a placeholder page.
 Each site has a `version.json` with the branch, commit and build time:
 
 ```bash
-curl -s http://ggrzesiek.dev/opendatahackathon42/version.json
-curl -s http://ggrzesiek.dev/opendatahackathon42/dev/version.json
+curl -s http://ggrzesiek.dev/Sluchowisko/version.json
+curl -s http://ggrzesiek.dev/Sluchowisko/dev/version.json
 ```
 
 Compare `commit` with the branch:

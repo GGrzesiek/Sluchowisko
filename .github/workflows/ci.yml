@@ -83,7 +83,7 @@ jobs:
           fetch-depth: 0
       - if: github.event_name == 'pull_request'
         run: git update-ref refs/remotes/origin/development HEAD
-      - run: PAGES_BASE_PATH=/opendatahackathon42 python3 .github/pages/build.py _site
+      - run: PAGES_BASE_PATH=/Sluchowisko python3 .github/pages/build.py _site
       - run: test -f _site/index.html && test -f _site/dev/index.html && test -f _site/dev/version.json
 
   app:
